@@ -2,7 +2,7 @@ import PyPDF2  #biblioteca para manipulação de Pdfs
 
 print('1 - Combinar Pdfs\n'
       '2 - Combinar páginas específicas  de um Pdf\n'
-      '3-  Metadados do arquivo: ')
+      '3-  Metadados do Pdf: ')
 opcao = int(input())
 
 if(opcao == 1):
