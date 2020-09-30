@@ -28,6 +28,8 @@ class Application:
         self.menu_ordenacao.add_command(
             label='Nome', command=lambda: self.ordenar_tabela('nome'))
         self.menu_ordenacao.add_command(
+            label='Nome com diretório', command=lambda: self.ordenar_tabela('diretorio'))
+        self.menu_ordenacao.add_command(
             label='Data de modificação', command=lambda: self.ordenar_tabela('data'))
 
         # tabela utilizando treeview
@@ -60,18 +62,42 @@ class Application:
 
     def ordenar_tabela(self, ordenacao):
         "ordena os itens da tabela de acordo o parametro passado para ordenacao"
-        
-        # pegando os dados armazenados na tabela
+
+        # pegando as strings armazenadas na tabela
         lista_arquivos = []
         ids = self.tabela.get_children()
         for id in ids:
             item_content = self.tabela.item(id, 'text')
             lista_arquivos.append(item_content)
-        
+
         if ordenacao == 'nome':
+            # pega o nome ignorando o diretorio
+            lista_nomes = []
+            for item in lista_arquivos:
+                lista_nomes.append(item.split('/')[-1])
+            
+            '''
+            utilizando trecho de codigo de bubble sortem vez de .sort(str.lower)
+            para fazer as mesmas alterações feitas na lista_nomes
+            na lista_arquivos
+            '''
+            sorted = False
+            while not sorted:
+                sorted = True
+                for i in range(len(lista_nomes) - 1):
+                    if lista_nomes[i+1].lower() < lista_nomes[i].lower():
+                        sorted = False
+                        lista_nomes[i+1], lista_nomes[i] = lista_nomes[i], lista_nomes[i+1]
+                        lista_arquivos[i+1], lista_arquivos[i] = lista_arquivos[i], lista_arquivos[i+1]
+
+        elif ordenacao == 'diretorio':
             lista_arquivos.sort(key=str.lower)
-            self.excluir_arquivos(self.tabela.get_children())
-            self.adicionar_arquivos(lista_arquivos) 
+
+        elif ordenacao == 'data':
+            pass  # necessario extrair dados do pdf
+
+        self.excluir_arquivos(ids)
+        self.adicionar_arquivos(lista_arquivos)
 
 
 
