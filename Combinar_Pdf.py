@@ -1,6 +1,6 @@
 import fitz
 
-print('1 - Combinar 2 Pdfs\n'
+print('1 - Combinar páginas especificas de 2 Pdfs\n'
       '2 - Combinar páginas específicas  de um Pdf\n'
       '3 - Remover páginas de um Pdf\n'
       '4 - Metadados de um Pdf:')
