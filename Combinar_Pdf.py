@@ -1,7 +1,7 @@
 import fitz
 
-print('1 - Combinar páginas específicas 2 Pdfs\n'
-      '2 - Combinar páginas específicas  de um Pdf\n'
+print('1 - Combinar páginas específicas  de 2 Pdfs\n'
+      '2 - Combinar páginas específicas  de 1 Pdf\n'
       '3 - Remover páginas de um Pdf\n'
       '4 - Metadados de um Pdf:')
 opcao = int(input())
@@ -28,7 +28,7 @@ if(opcao == 1):
             break
     doc2.select(paginas)
     doc1.insertPDF(doc2)
-    doc1.save("PDF_Combinado.pdf")
+    doc1.save("PDF_Combinados.pdf")
     print("PDFs combinados")
 elif(opcao==2):
     arquivo1 = input("Digite o nome do PDF: ")
@@ -36,7 +36,7 @@ elif(opcao==2):
     doc1 = fitz.open(arquivo1)  # abrindo o pdf
     paginas= []
     while True:
-        paginas.append(int(input("Digite o número da página: ")))
+        paginas.append((int(input("Digite o número da página: ")))-1)
         resp = str(input("Que continuar inserindo páginas? [S/N]: "))
         if resp in 'Nn':
             break
@@ -48,8 +48,8 @@ elif(opcao==3):
     arquivo1 = arquivo1 + '.pdf'
     doc1 = fitz.open(arquivo1)  # abrindo o pdf
     while True:
-        i= int(input("Digite o número da página a ser removida: "))
-        doc1.deletePage(i) #remove página selecionada
+        i= int((input("Digite o número da página a ser removida: ")))
+        doc1.deletePage(i-1) #remove página selecionada
         resp = str(input("Que continuar removendo páginas? [S/N]: "))
         if resp in 'Nn':
             break
