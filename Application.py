@@ -132,7 +132,7 @@ class Application:
         elif ordenacao == 'data':
             itens.sort(key=os.path.getmtime)
             itens = reversed(itens)
-            
+
         elif ordenacao == 'antigo':
             itens.sort(key=os.path.getmtime)
 
@@ -162,7 +162,8 @@ class Application:
         self.label_imagem.imagem = self.combinadorPDF.lista_imagens[0]
         self.label_pagina_atual = Label(
             self.frame_imagem, text='Pagina 1 de {}'.format(self.combinadorPDF.tamanho_arquivo))
-        self.botao_avancar = Button(self.frame_imagem, text='>')
+        self.botao_avancar = Button(
+            self.frame_imagem, text='>', command=lambda: self.avancar_pagina(1))
         self.botao_voltar = Button(self.frame_imagem, text='<', state=DISABLED)
         self.botao_deletar = Button(self.frame_imagem, text='Deletar página')
         self.botao_metadados = Button(
@@ -177,6 +178,65 @@ class Application:
 
         # visualizaçao do frame contendo metadados
         self.metadados_visiveis = False
+
+    def avancar_pagina(self, pagina_atual):
+        "mostra a proxima pagina do pdf sendo visualizado"
+
+        # atualizando os widgets
+        self.label_imagem = Label(
+            self.frame_imagem, image=self.combinadorPDF.lista_imagens[pagina_atual])
+        self.label_imagem.imagem = self.combinadorPDF.lista_imagens[pagina_atual]
+        self.label_pagina_atual = Label(
+            self.frame_imagem, text='Pagina {} de {}'.format(pagina_atual+1, self.combinadorPDF.tamanho_arquivo))
+        self.botao_avancar = Button(
+            self.frame_imagem, text='>', command=lambda: self.avancar_pagina(pagina_atual+1))
+        self.botao_voltar = Button(
+            self.frame_imagem, text='<', command=lambda: self.voltar_pagina(pagina_atual-1))
+        self.botao_deletar = Button(
+            self.frame_imagem, text='Deletar página')
+        self.botao_metadados = Button(
+            self.frame_imagem, text='Editar metadados', command=self.editar_metadados)
+
+        # desabilitando o botao avancar na ultima imagem
+        if pagina_atual + 1 == self.combinadorPDF.tamanho_arquivo:
+            self.botao_avancar = Button(
+                self.frame_imagem, text='>', state=DISABLED)
+
+        self.botao_voltar.grid(row=0, column=0)
+        self.label_imagem.grid(row=0, column=1, columnspan=2)
+        self.botao_avancar.grid(row=0, column=3)
+        self.label_pagina_atual.grid(row=1, column=1, columnspan=2)
+        self.botao_deletar.grid(row=2, column=1)
+        self.botao_metadados.grid(row=2, column=2)
+
+    def voltar_pagina(self, pagina_atual):
+        "similar ao avancar_pagina porem voltando a pagina"
+
+        # atualizando os widgets
+        self.label_imagem = Label(
+            self.frame_imagem, image=self.combinadorPDF.lista_imagens[pagina_atual])
+        self.label_imagem.imagem = self.combinadorPDF.lista_imagens[pagina_atual]
+        self.label_pagina_atual = Label(
+            self.frame_imagem, text='Pagina {} de {}'.format(pagina_atual+1, self.combinadorPDF.tamanho_arquivo))
+        self.botao_avancar = Button(
+            self.frame_imagem, text='>', command=lambda: self.avancar_pagina(pagina_atual+1))
+        self.botao_voltar = Button(
+            self.frame_imagem, text='<', command=lambda: self.voltar_pagina(pagina_atual-1))
+        self.botao_deletar = Button(self.frame_imagem, text='Deletar página')
+        self.botao_metadados = Button(
+            self.frame_imagem, text='Editar metadados', command=self.editar_metadados)
+
+        # desabilitando o botao voltar na primeira pagina
+        if pagina_atual == 0:
+            self.botao_voltar = Button(
+                self.frame_imagem, text='<', state=DISABLED)
+
+        self.botao_voltar.grid(row=0, column=0)
+        self.label_imagem.grid(row=0, column=1, columnspan=2)
+        self.botao_avancar.grid(row=0, column=3)
+        self.label_pagina_atual.grid(row=1, column=1, columnspan=2)
+        self.botao_deletar.grid(row=2, column=1)
+        self.botao_metadados.grid(row=2, column=2)
 
     def editar_metadados(self):
         '''
