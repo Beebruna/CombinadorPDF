@@ -1,6 +1,6 @@
 import fitz
 
-print('1 - Combinar páginas especificas de 2 Pdfs\n'
+print('1 - Combinar páginas específicas 2 Pdfs\n'
       '2 - Combinar páginas específicas  de um Pdf\n'
       '3 - Remover páginas de um Pdf\n'
       '4 - Metadados de um Pdf:')
@@ -12,7 +12,7 @@ if(opcao == 1):
     doc1 = fitz.open(arquivo1)  # abrindo o pdf
     paginas= []
     while True:
-        paginas.append(int(input("Digite o número da página: ")))
+        paginas.append((int(input("Digite o número da página: ")))-1) #pois o python começa a contagem no 0
         resp = str(input("Que continuar inserindo páginas? [S/N]: "))
         if resp in 'Nn':
             break
@@ -22,13 +22,12 @@ if(opcao == 1):
     doc2 = fitz.open(arquivo2)  # abrindo o pdf
     paginas= []
     while True:
-        paginas.append(int(input("Digite o número da página: ")))
+        paginas.append((int(input("Digite o número da página: ")))-1) #pois o python começa a contagem no 0
         resp = str(input("Que continuar inserindo páginas? [S/N]: "))
         if resp in 'Nn':
             break
     doc2.select(paginas)
     doc1.insertPDF(doc2)
-    doc1.close()
     doc1.save("PDF_Combinado.pdf")
     print("PDFs combinados")
 elif(opcao==2):
@@ -43,7 +42,6 @@ elif(opcao==2):
             break
     doc1.select(paginas)
     doc1.save("Pdf_Combinado.pdf")
-    doc1.close()
     print("PDF combinado")
 elif(opcao==3):
     arquivo1 = input("Digite o nome do PDF: ")
@@ -64,3 +62,5 @@ elif(opcao==4):
     print("Metadados: {0}",doc1.metadata)
 else:
     print("Opcao inválida")
+
+
