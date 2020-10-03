@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter.filedialog import askopenfilenames, asksaveasfilename
 from tkinter import ttk
 from CombinadorPDF import *
+import os
 
 class Application:
     def __init__(self, master):
@@ -9,7 +10,7 @@ class Application:
 
         self.master = master
         self.master.title('CombinadorPDF')
-        self.master.geometry('350x350')
+        self.master.geometry('330x330')
 
         # frame em que serao colocados os widgets
         self.frame_tabela = Frame(self.master)
@@ -23,6 +24,12 @@ class Application:
         self.menu.add_cascade(label='Arquivos', menu=self.menu_arquivos)
 
         self.menu_arquivos.add_command(
+            label='Adicionar arquivos', command=lambda: self.adicionar_arquivos(askopenfilenames()))
+        self.menu_arquivos.add_command(label='Excluir arquivo selecionado',
+                                       command=lambda: self.excluir_arquivos(self.tabela.selection()))
+        self.menu_arquivos.add_command(
+            label='Editar arquivo selecionado', command=lambda: self.editar_arquivo(self.tabela.selection()))
+        self.menu_arquivos.add_command(
             label='Excluir todos registros', command=lambda: self.excluir_arquivos(self.tabela.get_children()))
 
         self.menu_ordenacao = Menu(self.menu)
@@ -34,27 +41,47 @@ class Application:
         self.menu_ordenacao.add_command(
             label='Nome com diretório', command=lambda: self.ordenar_tabela('diretorio'))
         self.menu_ordenacao.add_command(
-            label='Data de modificação', command=lambda: self.ordenar_tabela('data'))
+            label='Data de modificação mais recente', command=lambda: self.ordenar_tabela('data'))
+        self.menu_ordenacao.add_command(
+            label='Data de modificação mais antiga', command=lambda: self.ordenar_tabela('antigo'))
 
         # tabela utilizando treeview
         self.tabela = ttk.Treeview(self.frame_tabela)
 
-        self.tabela.heading('#0', text='Arquivos selecionados')
+        self.tabela.heading('#0', text='Arquivos')
         self.tabela.column('#0', stretch=True)
 
-        self.tabela.pack(fill=X, expand=1, pady=10)
-
         # botoes
+        # frame para colocar os botoes abaixo da tabela com grid layout
+        self.frame_botoes = Frame(self.frame_tabela)
         self.botao_adicionar = Button(
-            self.frame_tabela, text='Adicionar', command=lambda: self.adicionar_arquivos(askopenfilenames()))
-        self.botao_excluir = Button(self.frame_tabela, text='Excluir',
-                                    command=lambda: self.excluir_arquivos(self.tabela.selection()[0]))
+            self.frame_botoes, text='Adicionar', command=lambda: self.adicionar_arquivos(askopenfilenames()))
+        self.botao_excluir = Button(self.frame_botoes, text='Excluir',
+                                    command=lambda: self.excluir_arquivos(self.tabela.selection()))
         self.botao_editar = Button(
-            self.frame_tabela, text='Editar', command=lambda: self.editar_arquivo(self.tabela.selection()))
+            self.frame_botoes, text='Editar', command=lambda: self.editar_arquivo(self.tabela.selection()))
+        self.botao_mover_cima = Button(
+            self.frame_tabela, text='↑', command=lambda: self.mover_cima(self.tabela.selection()[0]))
+        self.botao_mover_baixo = Button(
+            self.frame_tabela, text='↓', command=lambda: self.mover_baixo(self.tabela.selection()[0]))
 
-        self.botao_adicionar.pack()
-        self.botao_excluir.pack()
-        self.botao_editar.pack()
+        self.botao_mover_cima.pack(side=LEFT)
+        self.botao_mover_baixo.pack(side=RIGHT)
+        self.tabela.pack(fill=X, expand=1, pady=10)
+        self.frame_botoes.pack()
+        self.botao_adicionar.grid(row=0, column=0)
+        self.botao_excluir.grid(row=0, column=1)
+        self.botao_editar.grid(row=0, column=2)
+
+    def mover_cima(self, arquivo_selecionado):
+        "troca a posição de dois arquivos na tabela, colocando o arquivo selecionado uma posição a frente"
+        self.tabela.move(arquivo_selecionado, self.tabela.parent(
+            arquivo_selecionado), self.tabela.index(arquivo_selecionado)-1)
+
+    def mover_baixo(self, arquivo_selecionado):
+        "similar ao mover_cima(), mas move o arquivo para baixo"
+        self.tabela.move(arquivo_selecionado, self.tabela.parent(
+            arquivo_selecionado), self.tabela.index(arquivo_selecionado)+1)
 
     def adicionar_arquivos(self, arquivos_selecionados):
         "adiciona os arquivos em formato pdf selecionados"
@@ -103,7 +130,11 @@ class Application:
             itens.sort(key=str.lower)
 
         elif ordenacao == 'data':
-            pass  # necessario extrair dados do pdf
+            itens.sort(key=os.path.getmtime)
+            itens = reversed(itens)
+            
+        elif ordenacao == 'antigo':
+            itens.sort(key=os.path.getmtime)
 
         self.excluir_arquivos(ids)
         self.adicionar_arquivos(itens)
@@ -117,7 +148,7 @@ class Application:
         # pegando informaçao necessaria
         arquivo_selecionado = self.tabela.item(id_item_selecionado, 'text')
         self.combinadorPDF = CombinadorPDF(arquivo_selecionado)
-        self.combinadorPDF.get_images()
+        self.combinadorPDF.extrair_dados()
 
         # abrindo nova janela e inicializando widgets
         self.window = Toplevel()
@@ -155,11 +186,15 @@ class Application:
 
         if self.metadados_visiveis:
             self.metadados_visiveis = False
+            self.separator.destroy()
             self.frame_metadados.destroy()
         else:
+            # definindo frame e separator
             self.metadados_visiveis = True
             self.frame_metadados = Frame(self.window)
-            self.frame_metadados.grid(row=0, column=1)
+            self.separator = ttk.Separator(self.window, orient=VERTICAL)
+            self.separator.grid(row=0, column=1, sticky='ns', padx=15)
+            self.frame_metadados.grid(row=0, column=2)
 
             # blocos com label e entry dentro de um frame com pady para distancia-los uns dos outros
             self.frame_format = Frame(self.frame_metadados)
