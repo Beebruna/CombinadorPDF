@@ -1,59 +1,66 @@
-import PyPDF2  #biblioteca para manipulação de Pdfs
+import fitz
 
-print('1 - Combinar Pdfs\n'
+print('1 - Combinar 2 Pdfs\n'
       '2 - Combinar páginas específicas  de um Pdf\n'
-      '3-  Metadados do Pdf: ')
+      '3 - Remover páginas de um Pdf\n'
+      '4 - Metadados de um Pdf:')
 opcao = int(input())
 
 if(opcao == 1):
-    count=0
-    arquivo= list()
+    arquivo1 = input("Digite o nome do 1° PDF: ")
+    arquivo1 = arquivo1 + '.pdf' #forçando o arquivo estar em pdf
+    doc1 = fitz.open(arquivo1)  # abrindo o pdf
+    paginas= []
     while True:
-        arq = input('Digite o nome do {}° arquivo: '.format(count+1)) #inserir documento para combinar
-        count +=1
-        if arq not in arquivo:
-            arquivo.append(arq+'.pdf') #forçar o arquivo estar no formato pdf
-        else:
-            print('Arquivo já inserido!')
-        ler = str(input(('Quer continuar incluindo Pdfs? [S/N]: '))) #pergunta ao usuario se ele quer continuando adicionando pdfs
-        if ler in 'Nn':
+        paginas.append(int(input("Digite o número da página: ")))
+        resp = str(input("Que continuar inserindo páginas? [S/N]: "))
+        if resp in 'Nn':
             break
-
-    escrever = PyPDF2.PdfFileWriter()
-    for i in arquivo:
-        pdf= PyPDF2.PdfFileReader(i, 'rb') #Modo de leitura binário para não dar erro
-        for pagina in range(pdf.getNumPages()):
-            escrever.addPage(pdf.getPage(pagina))
-    with open('Pdfcombinado.pdf', 'wb') as out:  #Nome do arquivo combinado
-        escrever.write(out)
-    print('Pdf combinado')
-elif(opcao == 2):
-    arquivo = input('Digite o nome do  arquivo: ')  # inserir documento
-    arquivo= arquivo+'.pdf' #forçar o arquivo estar no formato pdf
-    pdf= PyPDF2.PdfFileReader(arquivo, 'r') #Modo de leitura binário para não dar erro
-    escrever= PyPDF2.PdfFileWriter()
+    doc1.select(paginas)
+    arquivo2 = input("Digite o nome do 2° PDF: ")
+    arquivo2 = arquivo2 + '.pdf'
+    doc2 = fitz.open(arquivo2)  # abrindo o pdf
+    paginas= []
     while True:
-        pag= int(input('Digite o número da página: '))
-        escrever.addPage(pdf.getPage(pag))
-        ler = str(input(
-            ('Quer continuar incluindo páginas desse arquivo? [S/N]: ')))  # pergunta ao usuario se ele quer continuando adicionando pdfs
-        if ler in 'Nn':
+        paginas.append(int(input("Digite o número da página: ")))
+        resp = str(input("Que continuar inserindo páginas? [S/N]: "))
+        if resp in 'Nn':
             break
-    with open('Pdf_combinado.pdf', 'wb') as out:
-        escrever.write(out)
-        print("Pdf combinado")
-
+    doc2.select(paginas)
+    doc1.insertPDF(doc2)
+    doc1.close()
+    doc1.save("PDF_Combinado.pdf")
+    print("PDFs combinados")
+elif(opcao==2):
+    arquivo1 = input("Digite o nome do PDF: ")
+    arquivo1 = arquivo1 + '.pdf'
+    doc1 = fitz.open(arquivo1)  # abrindo o pdf
+    paginas= []
+    while True:
+        paginas.append(int(input("Digite o número da página: ")))
+        resp = str(input("Que continuar inserindo páginas? [S/N]: "))
+        if resp in 'Nn':
+            break
+    doc1.select(paginas)
+    doc1.save("Pdf_Combinado.pdf")
+    doc1.close()
+    print("PDF combinado")
+elif(opcao==3):
+    arquivo1 = input("Digite o nome do PDF: ")
+    arquivo1 = arquivo1 + '.pdf'
+    doc1 = fitz.open(arquivo1)  # abrindo o pdf
+    while True:
+        i= int(input("Digite o número da página a ser removida: "))
+        doc1.deletePage(i) #remove página selecionada
+        resp = str(input("Que continuar removendo páginas? [S/N]: "))
+        if resp in 'Nn':
+            break
+    doc1.save("PDF_Modificado.pdf") #salvando Pdf modificado
+    print("PDF Modificado")
+elif(opcao==4):
+    arquivo1 = input("Digite o nome do PDF: ")
+    arquivo1 = arquivo1 + '.pdf'
+    doc1 = fitz.open(arquivo1)  # abrindo o pdf
+    print("Metadados: {0}",doc1.metadata)
 else:
-    arquivo= input("Digite o nome do pdf: ")
-    arquivo= arquivo+'.pdf' #forçar o arquivo estar no formato pdf
-    '''Os tipos de metadados que a biblioteca consegue extrair é 
-    autor, creator, produtor, assunto, título, número de páginas '''
-    info=open(arquivo, 'rb')
-    pdf= PyPDF2.PdfFileReader(info)
-    informacao = pdf.getDocumentInfo()
-    n_paginas= pdf.getNumPages()
-    print('Título: ',informacao.title)
-    print('Autores: ', informacao.author)
-    print('Número de páginas: ', n_paginas)
-    #print('Onde foi produzido: ', informacao.producer)
-    #print('Assunto', informacao.subject)
+    print("Opcao inválida")
