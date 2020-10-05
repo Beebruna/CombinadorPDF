@@ -6,7 +6,9 @@ import os
 
 class Application:
     def __init__(self, master):
-        "cria widgets na tela inicial"
+        "cria widgets na tela inicial e inicializa combinadorPDF"
+
+        self.combinadorPDF = CombinadorPDF()
 
         self.master = master
         self.master.title('CombinadorPDF')
@@ -73,41 +75,44 @@ class Application:
         self.botao_excluir.grid(row=0, column=1)
         self.botao_editar.grid(row=0, column=2)
 
-    def mover_cima(self, arquivo_selecionado):
-        "troca a posição de dois arquivos na tabela, colocando o arquivo selecionado uma posição a frente"
-        self.tabela.move(arquivo_selecionado, self.tabela.parent(
-            arquivo_selecionado), self.tabela.index(arquivo_selecionado)-1)
+    def mover_cima(self, id_arquivo_selecionado):
+        "troca a posição de dois arquivos na lista do combinadorPDF e na tabela"
+        nome_arquivo = self.tabela.item(id_arquivo_selecionado, 'text')
+        self.combinadorPDF.mover_cima(nome_arquivo)
 
-    def mover_baixo(self, arquivo_selecionado):
+        self.tabela.move(id_arquivo_selecionado, self.tabela.parent(
+            id_arquivo_selecionado), self.tabela.index(id_arquivo_selecionado)-1)
+
+    def mover_baixo(self, id_arquivo_selecionado):
         "similar ao mover_cima(), mas move o arquivo para baixo"
-        self.tabela.move(arquivo_selecionado, self.tabela.parent(
-            arquivo_selecionado), self.tabela.index(arquivo_selecionado)+1)
+        nome_arquivo = self.tabela.item(id_arquivo_selecionado, 'text')
+        self.combinadorPDF.mover_baixo(nome_arquivo)
 
-    def adicionar_arquivos(self, arquivos_selecionados):
-        "adiciona os arquivos em formato pdf selecionados"
-        for a in arquivos_selecionados:
-            if a.endswith('.pdf'):
-                self.tabela.insert(parent='', index='end', text=a)
+        self.tabela.move(id_arquivo_selecionado, self.tabela.parent(
+            id_arquivo_selecionado), self.tabela.index(id_arquivo_selecionado)+1)
 
-    def excluir_arquivos(self, arquivos_selecionados):
+    def adicionar_arquivos(self, nome_arquivos):
+        "adiciona os arquivos em formato pdf selecionados a tabela e ao combindorPDF"
+        for nome_arquivo in nome_arquivos:
+            if nome_arquivo.endswith('.pdf') and nome_arquivo not in self.combinadorPDF.nome_arquivos:
+                # evitar adicionar o mesmo arquivo mais de uma vez, pois o nome é a chave do dicionario
+                self.combinadorPDF.adicionar_arquivos([nome_arquivo])
+                self.tabela.insert(parent='', index='end', text=nome_arquivo)
+
+    def excluir_arquivos(self, id_arquivos):
         "exclui os arquivos selecionados da tabela"
-        for a in arquivos_selecionados:
-            self.tabela.delete(a)
+        nome_arquivos = []
+        for id_arquivo in id_arquivos:
+            nome_arquivos.append(self.tabela.item(id_arquivo, 'text'))
+            self.tabela.delete(id_arquivo)
 
-    def get_itens_tabela(self):
-        "retorna diretamente o texto dos itens da tabela em vez do id com o metodo get_children()"
-        ids = self.tabela.get_children()
-        itens = []
-        for id in ids:
-            itens.append(self.tabela.item(id, 'text'))
-
-        return itens
+        self.combinadorPDF.excluir_arquivos(nome_arquivos)
 
     def ordenar_tabela(self, ordenacao):
         "ordena os itens da tabela de acordo o parametro passado para ordenacao"
 
         ids = self.tabela.get_children()
-        itens = self.get_itens_tabela()
+        itens = list(self.combinadorPDF.nome_arquivos) # evitar que apontem para o mesmo objeto
 
         if ordenacao == 'nome':
             # pega o nome ignorando o diretorio
@@ -146,22 +151,21 @@ class Application:
         '''
 
         # pegando informaçao necessaria
-        arquivo_selecionado = self.tabela.item(id_item_selecionado, 'text')
-        self.combinadorPDF = CombinadorPDF(arquivo_selecionado)
-        self.combinadorPDF.extrair_dados()
+        self.nome_arquivo = self.tabela.item(id_item_selecionado, 'text')
+        self.lista_imagens, self.tamanho_arquivo = self.combinadorPDF.extrair_dados(self.nome_arquivo)
 
         # abrindo nova janela e inicializando widgets
         self.window = Toplevel()
-        self.window.title(arquivo_selecionado)
+        self.window.title(self.nome_arquivo)
 
         self.frame_imagem = Frame(self.window)
         self.frame_imagem.grid(row=0, column=0)
 
         self.label_imagem = Label(
-            self.frame_imagem, image=self.combinadorPDF.lista_imagens[0])
-        self.label_imagem.imagem = self.combinadorPDF.lista_imagens[0]
+            self.frame_imagem, image=self.lista_imagens[0])
+        self.label_imagem.imagem = self.lista_imagens[0]
         self.label_pagina_atual = Label(
-            self.frame_imagem, text='Pagina 1 de {}'.format(self.combinadorPDF.tamanho_arquivo))
+            self.frame_imagem, text='Pagina 1 de {}'.format(self.tamanho_arquivo))
         self.botao_avancar = Button(
             self.frame_imagem, text='>', command=lambda: self.avancar_pagina(1))
         self.botao_voltar = Button(self.frame_imagem, text='<', state=DISABLED)
@@ -184,10 +188,10 @@ class Application:
 
         # atualizando os widgets
         self.label_imagem = Label(
-            self.frame_imagem, image=self.combinadorPDF.lista_imagens[pagina_atual])
-        self.label_imagem.imagem = self.combinadorPDF.lista_imagens[pagina_atual]
+            self.frame_imagem, image=self.lista_imagens[pagina_atual])
+        self.label_imagem.imagem = self.lista_imagens[pagina_atual]
         self.label_pagina_atual = Label(
-            self.frame_imagem, text='Pagina {} de {}'.format(pagina_atual+1, self.combinadorPDF.tamanho_arquivo))
+            self.frame_imagem, text='Pagina {} de {}'.format(pagina_atual+1, self.tamanho_arquivo))
         self.botao_avancar = Button(
             self.frame_imagem, text='>', command=lambda: self.avancar_pagina(pagina_atual+1))
         self.botao_voltar = Button(
@@ -198,7 +202,7 @@ class Application:
             self.frame_imagem, text='Editar metadados', command=self.editar_metadados)
 
         # desabilitando o botao avancar na ultima imagem
-        if pagina_atual + 1 == self.combinadorPDF.tamanho_arquivo:
+        if pagina_atual + 1 == self.tamanho_arquivo:
             self.botao_avancar = Button(
                 self.frame_imagem, text='>', state=DISABLED)
 
@@ -214,10 +218,10 @@ class Application:
 
         # atualizando os widgets
         self.label_imagem = Label(
-            self.frame_imagem, image=self.combinadorPDF.lista_imagens[pagina_atual])
-        self.label_imagem.imagem = self.combinadorPDF.lista_imagens[pagina_atual]
+            self.frame_imagem, image=self.lista_imagens[pagina_atual])
+        self.label_imagem.imagem = self.lista_imagens[pagina_atual]
         self.label_pagina_atual = Label(
-            self.frame_imagem, text='Pagina {} de {}'.format(pagina_atual+1, self.combinadorPDF.tamanho_arquivo))
+            self.frame_imagem, text='Pagina {} de {}'.format(pagina_atual+1, self.tamanho_arquivo))
         self.botao_avancar = Button(
             self.frame_imagem, text='>', command=lambda: self.avancar_pagina(pagina_atual+1))
         self.botao_voltar = Button(
@@ -331,40 +335,53 @@ class Application:
             self.entry_encryption.pack()
 
             self.botao_salvar_metadados = Button(
-                self.frame_metadados, text='Salvar')
+                self.frame_metadados, text='Salvar', command=self.salvar_metadados)
             self.botao_salvar_metadados.pack()
 
             # evitar erros quando certo atributo for None
-            if self.combinadorPDF.pdf.metadata['format']:
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['format']:
                 self.entry_format.insert(
-                    0, self.combinadorPDF.pdf.metadata['format'])
-            if self.combinadorPDF.pdf.metadata['title']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['format'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['title']:
                 self.entry_title.insert(
-                    0, self.combinadorPDF.pdf.metadata['title'])
-            if self.combinadorPDF.pdf.metadata['author']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['title'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['author']:
                 self.entry_author.insert(
-                    0, self.combinadorPDF.pdf.metadata['author'])
-            if self.combinadorPDF.pdf.metadata['subject']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['author'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['subject']:
                 self.entry_subject.insert(
-                    0, self.combinadorPDF.pdf.metadata['subject'])
-            if self.combinadorPDF.pdf.metadata['keywords']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['subject'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['keywords']:
                 self.entry_keywords.insert(
-                    0, self.combinadorPDF.pdf.metadata['keywords'])
-            if self.combinadorPDF.pdf.metadata['creator']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['keywords'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['creator']:
                 self.entry_creator.insert(
-                    0, self.combinadorPDF.pdf.metadata['creator'])
-            if self.combinadorPDF.pdf.metadata['producer']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['creator'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['producer']:
                 self.entry_producer.insert(
-                    0, self.combinadorPDF.pdf.metadata['producer'])
-            if self.combinadorPDF.pdf.metadata['creationDate']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['producer'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['creationDate']:
                 self.entry_creation_date.insert(
-                    0, self.combinadorPDF.pdf.metadata['creationDate'])
-            if self.combinadorPDF.pdf.metadata['modDate']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['creationDate'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['modDate']:
                 self.entry_mod_date.insert(
-                    0, self.combinadorPDF.pdf.metadata['modDate'])
-            if self.combinadorPDF.pdf.metadata['encryption']:
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['modDate'])
+            if self.combinadorPDF.pdf[self.nome_arquivo].metadata['encryption']:
                 self.entry_encryption.insert(
-                    0, self.combinadorPDF.pdf.metadata['encryption'])
+                    0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['encryption'])
+                
+    def salvar_metadados(self):
+        "modifica os metadados do pdf, substituindo pelas strings nos campos de entrada"
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['format'] = self.entry_format.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['title'] = self.entry_title.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['author'] = self.entry_author.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['subject'] = self.entry_subject.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['keywords'] = self.entry_keywords.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['creator'] = self.entry_creator.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['producer'] = self.entry_producer.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['creationDate'] = self.entry_creation_date.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['modDate'] = self.entry_mod_date.get()
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['encryption'] = self.entry_encryption.get()
 
 if __name__ == '__main__':
     root = Tk()
