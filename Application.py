@@ -3,7 +3,6 @@ from tkinter.filedialog import askopenfilenames, asksaveasfilename
 from tkinter import ttk
 from CombinadorPDF import *
 import os
-
 class Application:
     def __init__(self, master):
         "cria widgets na tela inicial e inicializa combinadorPDF"
@@ -33,6 +32,7 @@ class Application:
             label='Editar arquivo selecionado', command=lambda: self.editar_arquivo(self.tabela.selection()))
         self.menu_arquivos.add_command(
             label='Excluir todos registros', command=lambda: self.excluir_arquivos(self.tabela.get_children()))
+        self.menu_arquivos.add_command(label='Combinar pdfs e fazer download', command=self.download_pdfs)
 
         self.menu_ordenacao = Menu(self.menu)
         self.menu.add_cascade(label='Opções de ordenação',
@@ -144,6 +144,24 @@ class Application:
 
         self.excluir_arquivos(ids)
         self.adicionar_arquivos(itens)
+    
+    def download_pdfs(self):
+        "combina todos os pdfs selecionados e faz download"
+        filename = asksaveasfilename()
+        
+        # verificaçoes no nome
+        if not filename:
+            return
+        if not filename.endswith('.pdf'):
+            filename += '.pdf'
+        
+        # combina
+        pdf = self.combinadorPDF.pdf[self.combinadorPDF.nome_arquivos[0]]
+        for nome_arquivo in self.combinadorPDF.nome_arquivos[1:]:
+            pdf.insertPDF(self.combinadorPDF.pdf[nome_arquivo])
+            
+        # download
+        pdf.save(filename)
 
     def editar_arquivo(self, id_item_selecionado):
         '''
