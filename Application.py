@@ -112,7 +112,8 @@ class Application:
         "ordena os itens da tabela de acordo o parametro passado para ordenacao"
 
         ids = self.tabela.get_children()
-        itens = list(self.combinadorPDF.nome_arquivos) # evitar que apontem para o mesmo objeto
+        # evitar que apontem para o mesmo objeto
+        itens = list(self.combinadorPDF.nome_arquivos)
 
         if ordenacao == 'nome':
             # pega o nome ignorando o diretorio
@@ -152,7 +153,8 @@ class Application:
 
         # pegando informaçao necessaria
         self.nome_arquivo = self.tabela.item(id_item_selecionado, 'text')
-        self.lista_imagens, self.tamanho_arquivo = self.combinadorPDF.extrair_dados(self.nome_arquivo)
+        self.lista_imagens, self.tamanho_arquivo = self.combinadorPDF.extrair_dados(
+            self.nome_arquivo)
 
         # abrindo nova janela e inicializando widgets
         self.window = Toplevel()
@@ -169,7 +171,8 @@ class Application:
         self.botao_avancar = Button(
             self.frame_imagem, text='>', command=lambda: self.avancar_pagina(1))
         self.botao_voltar = Button(self.frame_imagem, text='<', state=DISABLED)
-        self.botao_deletar = Button(self.frame_imagem, text='Deletar página')
+        self.botao_deletar = Button(
+            self.frame_imagem, text='Deletar página', command=lambda: self.deletar_pagina(0))
         self.botao_metadados = Button(
             self.frame_imagem, text='Editar metadados', command=self.editar_metadados)
 
@@ -197,14 +200,11 @@ class Application:
         self.botao_voltar = Button(
             self.frame_imagem, text='<', command=lambda: self.voltar_pagina(pagina_atual-1))
         self.botao_deletar = Button(
-            self.frame_imagem, text='Deletar página')
+            self.frame_imagem, text='Deletar página', command=lambda: self.deletar_pagina(pagina_atual))
         self.botao_metadados = Button(
             self.frame_imagem, text='Editar metadados', command=self.editar_metadados)
 
-        # desabilitando o botao avancar na ultima imagem
-        if pagina_atual + 1 == self.tamanho_arquivo:
-            self.botao_avancar = Button(
-                self.frame_imagem, text='>', state=DISABLED)
+        self.checar_pagina(pagina_atual)
 
         self.botao_voltar.grid(row=0, column=0)
         self.label_imagem.grid(row=0, column=1, columnspan=2)
@@ -226,14 +226,12 @@ class Application:
             self.frame_imagem, text='>', command=lambda: self.avancar_pagina(pagina_atual+1))
         self.botao_voltar = Button(
             self.frame_imagem, text='<', command=lambda: self.voltar_pagina(pagina_atual-1))
-        self.botao_deletar = Button(self.frame_imagem, text='Deletar página')
+        self.botao_deletar = Button(
+            self.frame_imagem, text='Deletar página', command=lambda: self.deletar_pagina(pagina_atual))
         self.botao_metadados = Button(
             self.frame_imagem, text='Editar metadados', command=self.editar_metadados)
 
-        # desabilitando o botao voltar na primeira pagina
-        if pagina_atual == 0:
-            self.botao_voltar = Button(
-                self.frame_imagem, text='<', state=DISABLED)
+        self.checar_pagina(pagina_atual)
 
         self.botao_voltar.grid(row=0, column=0)
         self.label_imagem.grid(row=0, column=1, columnspan=2)
@@ -241,6 +239,39 @@ class Application:
         self.label_pagina_atual.grid(row=1, column=1, columnspan=2)
         self.botao_deletar.grid(row=2, column=1)
         self.botao_metadados.grid(row=2, column=2)
+        
+    def checar_pagina(self, pagina_atual):
+        "usa o numero da pagina e o tamanho do arquivo para desabilitar os botoes voltar e avancar para evitar erros"
+        if pagina_atual == 0:
+            self.botao_voltar = Button(
+                self.frame_imagem, text='<', state=DISABLED)
+        if pagina_atual + 1 == self.tamanho_arquivo:
+            self.botao_avancar = Button(
+                self.frame_imagem, text='>', state=DISABLED)
+
+    def deletar_pagina(self, pagina_atual):
+        "exclui a pagina do pdf"
+
+        # removendo pagina
+        self.combinadorPDF.pdf[self.nome_arquivo].deletePage(pagina_atual)
+        self.lista_imagens.remove(self.lista_imagens[pagina_atual])
+        self.tamanho_arquivo = self.tamanho_arquivo - 1
+
+        # fechando janela ou alterando a pagina exibida
+        if self.tamanho_arquivo == 0:
+            self.combinadorPDF.excluir_arquivos([self.nome_arquivo])
+            for children in self.tabela.get_children():
+                if self.tabela.item(children, 'text') == self.nome_arquivo:
+                    self.window.destroy()
+                    self.tabela.delete(children)
+                    return
+        
+        if pagina_atual == 0:
+            self.voltar_pagina(pagina_atual)
+        elif pagina_atual == 1:
+            self.voltar_pagina(pagina_atual - 1)
+        else:
+            self.avancar_pagina(pagina_atual - 1)
 
     def editar_metadados(self):
         '''
@@ -369,20 +400,30 @@ class Application:
             if self.combinadorPDF.pdf[self.nome_arquivo].metadata['encryption']:
                 self.entry_encryption.insert(
                     0, self.combinadorPDF.pdf[self.nome_arquivo].metadata['encryption'])
-                
+
     def salvar_metadados(self):
         "modifica os metadados do pdf, substituindo pelas strings nos campos de entrada"
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['format'] = self.entry_format.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['title'] = self.entry_title.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['author'] = self.entry_author.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['subject'] = self.entry_subject.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['keywords'] = self.entry_keywords.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['creator'] = self.entry_creator.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['producer'] = self.entry_producer.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['creationDate'] = self.entry_creation_date.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['modDate'] = self.entry_mod_date.get()
-        self.combinadorPDF.pdf[self.nome_arquivo].metadata['encryption'] = self.entry_encryption.get()
-
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['format'] = self.entry_format.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['title'] = self.entry_title.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['author'] = self.entry_author.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['subject'] = self.entry_subject.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['keywords'] = self.entry_keywords.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['creator'] = self.entry_creator.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['producer'] = self.entry_producer.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['creationDate'] = self.entry_creation_date.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['modDate'] = self.entry_mod_date.get(
+        )
+        self.combinadorPDF.pdf[self.nome_arquivo].metadata['encryption'] = self.entry_encryption.get(
+        )
+        
 if __name__ == '__main__':
     root = Tk()
     Application(root)
