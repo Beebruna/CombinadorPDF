@@ -56,9 +56,8 @@ class CombinadorPDF:
             self.fitz_doc_combinado.insertPDF(self.pdf_dict[nome_arquivo])
 
 class PdfFile:
-    def __init__(self, nome_arquivo, fitz_doc):
+    def __init__(self, fitz_doc):
         # juntando informações do pdf
-        self.nome = nome_arquivo
         self.fitz_doc = fitz_doc
         self.tamanho = len(self.fitz_doc)
         self.extrair_imagens()
@@ -73,8 +72,16 @@ class PdfFile:
             image = image.resize((round(680/pix.height*pix.width), round(680)))
             self.lista_imagens.append(ImageTk.PhotoImage(image))
 
-    def download(self):
+    def download(self, filename):
         # faz download do pdf
+        self.nome = filename
+        
+        # validacao do nome
+        if not self.nome:
+            return
+        if not self.nome.endswith('.pdf'):
+            self.nome += '.pdf'   
+
         self.fitz_doc.save(self.nome)
 
 class MenuBar(tk.Menu):
@@ -186,22 +193,11 @@ class MenuBar(tk.Menu):
 
     def combinar_pdfs(self):
         # combina os pdfs e abre janela de exibição
-#         filename = filedialog.asksaveasfilename()
-        
-#         # validacao do nome
-#         if not filename:
-#             return
-#         if not filename.endswith('.pdf'):
-#             filename += '.pdf'   
-        filename = 'CombinadorPDF'
         self.combinadorPDF.combinar()
         
         top = tk.Toplevel()
         FrameVisualizadorPDF(top,
-                            self.combinadorPDF.fitz_doc_combinado,
-                            filename)
-
-
+                            self.combinadorPDF.fitz_doc_combinado)
 
 class FrameTreeview(tk.Frame):
     def __init__(self, parent):
@@ -301,13 +297,13 @@ class FrameTreeview(tk.Frame):
                              self.combinadorPDF)
 
 class FrameVisualizadorPDF(tk.Frame):
-    def __init__(self, parent, fitz_doc, nome_arquivo, treeview=None, id_arquivo=None, combinadorPDF=None):
+    def __init__(self, parent, fitz_doc, nome_arquivo=None, treeview=None, id_arquivo=None, combinadorPDF=None):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.id_arquivo = id_arquivo
         self.treeview = treeview
         self.combinadorPDF = combinadorPDF
-        self.pdf = PdfFile(nome_arquivo, fitz_doc)
+        self.pdf = PdfFile(fitz_doc)
 
         # widgets
         self.frame_metadados = FrameMetadados(self.parent, self.pdf)
@@ -321,30 +317,63 @@ class FrameVisualizadorPDF(tk.Frame):
                                      text='Pagina 1 de {}'.format(self.pdf.tamanho))
         self.botao_avancar = tk.Button(self,
                                        text='>',
-                                       command=lambda: self.forward(1))
+                                       command=lambda: self.atualizar_pagina(1))
         self.botao_voltar = tk.Button(self,
                                       text='<',
                                       state=tk.DISABLED)
         self.botao_excluir = tk.Button(self,
                                        text='Excluir pagina',
-                                       command=lambda: self.excluir_pagina(0))
+                                       command=lambda: self.excluir_pagina(0),
+                                       width=15)
+        self.botao_salvar = tk.Button(self,
+                                       text='Baixar',
+                                       command=self.salvar,
+                                       width=15)
         self.botao_metadados = tk.Button(self,
                                          text='Editar metadados',
-                                         command=self.mostrar_metadados)
+                                         command=self.mostrar_metadados,
+                                         width=15)
 
         # layout
         self.grid(row=0, column=0)
 
         self.botao_voltar.grid(row=0, column=0)
-        self.label_imagem.grid(row=0, column=1, columnspan=2)
-        self.botao_avancar.grid(row=0, column=3)
-        self.label_pagina.grid(row=1, column=1, columnspan=2)
+        self.label_imagem.grid(row=0, column=1, columnspan=3)
+        self.botao_avancar.grid(row=0, column=4)
+        self.label_pagina.grid(row=1, column=1, columnspan=3)
         self.botao_excluir.grid(row=2, column=1)
-        self.botao_metadados.grid(row=2, column=2)
+        self.botao_salvar.grid(row=2, column=2)
+        self.botao_metadados.grid(row=2, column=3)
 
         self.metadados_visiveis = False
 
-    def verifica_botoes(self, pagina):
+    def atualizar_pagina(self, pagina):
+        # atualiza a imagem e botoes na mudança de pagina
+        self.label_imagem = tk.Label(self,
+                                     image=self.pdf.lista_imagens[pagina])
+        # manter segunda referencia
+        self.label_imagem.imagem = self.pdf.lista_imagens[pagina]
+        self.label_pagina = tk.Label(self,
+                                     text='Pagina {} de {}'.format(pagina + 1, self.pdf.tamanho))
+        self.botao_avancar = tk.Button(self,
+                                       text='>',
+                                       command=lambda: self.atualizar_pagina(pagina + 1))
+        self.botao_voltar = tk.Button(self,
+                                      text='<',
+                                      command=lambda: self.atualizar_pagina(pagina - 1))
+        self.botao_excluir = tk.Button(self,
+                                       text='Excluir pagina',
+                                       command=lambda: self.excluir_pagina(pagina),
+                                       width=15)
+        self.botao_salvar = tk.Button(self,
+                                       text='Baixar',
+                                       command=self.salvar,
+                                       width=15)
+        self.botao_metadados = tk.Button(self,
+                                         text='Editar metadados',
+                                         command=self.mostrar_metadados,
+                                         width=15)
+
         # desabilita botao voltar na primeira pagina e avancar na ultima
         if pagina == 0:
             self.botao_voltar = tk.Button(self,
@@ -354,64 +383,15 @@ class FrameVisualizadorPDF(tk.Frame):
             self.botao_avancar = tk.Button(self,
                                            text='>',
                                            state=tk.DISABLED)
-
-    def forward(self, pagina):
-        # avança para a proxima pagina no visualizador de pdfs
-        self.label_imagem = tk.Label(self,
-                                     image=self.pdf.lista_imagens[pagina])
-        # manter segunda referencia
-        self.label_imagem.imagem = self.pdf.lista_imagens[pagina]
-        self.label_pagina = tk.Label(self,
-                                     text='Pagina {} de {}'.format(pagina + 1, self.pdf.tamanho))
-        self.botao_avancar = tk.Button(self,
-                                       text='>',
-                                       command=lambda: self.forward(pagina + 1))
-        self.botao_voltar = tk.Button(self,
-                                      text='<',
-                                      command=lambda: self.back(pagina - 1))
-        self.botao_excluir = tk.Button(self,
-                                       text='Excluir pagina',
-                                       command=lambda: self.excluir_pagina(pagina))
-        self.botao_metadados = tk.Button(self,
-                                         text='Editar metadados',
-                                         command=self.mostrar_metadados)
-
-        self.verifica_botoes(pagina)
-
+        
+        # layout
         self.botao_voltar.grid(row=0, column=0)
-        self.label_imagem.grid(row=0, column=1, columnspan=2)
-        self.botao_avancar.grid(row=0, column=3)
-        self.label_pagina.grid(row=1, column=1, columnspan=2)
+        self.label_imagem.grid(row=0, column=1, columnspan=3)
+        self.botao_avancar.grid(row=0, column=4)
+        self.label_pagina.grid(row=1, column=1, columnspan=3)
         self.botao_excluir.grid(row=2, column=1)
-
-    def back(self, pagina):
-        # volta para a pagina anterior no visualizador de pdfs
-        self.label_imagem = tk.Label(self,
-                                     image=self.pdf.lista_imagens[pagina])
-        # manter segunda referencia
-        self.label_imagem.imagem = self.pdf.lista_imagens[pagina]
-        self.label_pagina = tk.Label(self,
-                                     text='Pagina {} de {}'.format(pagina + 1, self.pdf.tamanho))
-        self.botao_avancar = tk.Button(self,
-                                       text='>',
-                                       command=lambda: self.forward(pagina + 1))
-        self.botao_voltar = tk.Button(self,
-                                      text='<',
-                                      command=lambda: self.back(pagina - 1))
-        self.botao_excluir = tk.Button(self,
-                                       text='Excluir pagina',
-                                       command=lambda: self.excluir_pagina(0))
-        self.botao_metadados = tk.Button(self,
-                                         text='Editar metadados',
-                                         command=self.mostrar_metadados)
-
-        self.verifica_botoes(pagina)
-
-        self.botao_voltar.grid(row=0, column=0)
-        self.label_imagem.grid(row=0, column=1, columnspan=2)
-        self.botao_avancar.grid(row=0, column=3)
-        self.label_pagina.grid(row=1, column=1, columnspan=2)
-        self.botao_excluir.grid(row=2, column=1)
+        self.botao_salvar.grid(row=2, column=2)
+        self.botao_metadados.grid(row=2, column=3)
 
     def excluir_pagina(self, pagina):
         # exclui a pagina do pdf sendo exibida
@@ -426,19 +406,16 @@ class FrameVisualizadorPDF(tk.Frame):
             # try caso nao tenha id
             # chamado pelo metodo combinar_pdfs
             try: 
-                nome_arquivo = self.treeview.item(self.id_arquivo, 'text')
                 self.treeview.delete(self.id_arquivo)
-                self.combinadorPDF.excluir_arquivos([nome_arquivo])
+                self.combinadorPDF.excluir_arquivos([self.nome_arquivo])
             finally:
                 self.parent.destroy()
                 return
 
         if pagina == 0:
-            self.back(pagina)
-        elif pagina == 1:
-            self.back(pagina - 1)
+            self.atualizar_pagina(pagina)
         else:
-            self.forward(pagina - 1)
+            self.atualizar_pagina(pagina - 1)
 
     def mostrar_metadados(self):
         if self.metadados_visiveis:
@@ -449,6 +426,10 @@ class FrameVisualizadorPDF(tk.Frame):
             self.metadados_visiveis = True
             self.separator.grid(row=0, column=1, sticky='ns', padx=15)
             self.frame_metadados.grid(row=0, column=2)
+            
+    def salvar(self):
+        filename = filedialog.asksaveasfilename()
+        self.pdf.download(filename)
 
 class FrameMetadados(tk.Frame):
     def __init__(self, parent, pdf):
@@ -466,7 +447,7 @@ class FrameMetadados(tk.Frame):
         self.entry_format.pack()
 
         self.frame_title = tk.Frame(self)
-        self.label_title = tk.Label(self.frame_title, text='Título')
+        self.label_title = tk.Label(self.frame_title, text='Titulo')
         self.entry_title = tk.Entry(self.frame_title, width=50)
         self.insert('title', self.entry_title)
         self.frame_title.pack(pady=15)
@@ -528,7 +509,7 @@ class FrameMetadados(tk.Frame):
 
         self.frame_mod_date = tk.Frame(self)
         self.label_mod_date = tk.Label(
-            self.frame_mod_date, text='Data de Modificação')
+            self.frame_mod_date, text='Data de modificação')
         self.entry_mod_date = tk.Entry(self.frame_mod_date, width=50)
         self.insert('modDate', self.entry_mod_date)
         self.frame_mod_date.pack(pady=15)
@@ -546,14 +527,37 @@ class FrameMetadados(tk.Frame):
 
         self.botao_salvar_metadados = tk.Button(self,
                                                 text='Salvar',
-                                                state=tk.DISABLED)
+                                                command=self.salvar_metadados)
         self.botao_salvar_metadados.pack()
 
     def insert(self, metadata, entry):
-        # insere o texto e desabilita o widget
+        # insere os metadados na entrada se for diferente de None
         if self.pdf.fitz_doc.metadata[metadata]:
             entry.insert(0, self.pdf.fitz_doc.metadata[metadata])
-        entry.configure(state=tk.DISABLED)
+            
+    def salvar_metadados(self):
+        if self.entry_format.get() != '':
+            self.pdf.fitz_doc.metadata['format'] = self.entry_format.get()
+        if self.entry_title.get() != '':
+            self.pdf.fitz_doc.metadata['title'] = self.entry_title.get()
+        if self.entry_author.get() != '':
+            self.pdf.fitz_doc.metadata['author'] = self.entry_author.get()
+        if self.entry_subject.get() != '':
+            self.pdf.fitz_doc.metadata['subject'] = self.entry_subject.get()
+        if self.entry_keywords.get() != '':
+            self.pdf.fitz_doc.metadata['keywords'] = self.entry_keywords.get()
+        if self.entry_creator.get() != '':
+            self.pdf.fitz_doc.metadata['creator'] = self.entry_creator.get()
+        if self.entry_producer.get() != '':
+            self.pdf.fitz_doc.metadata['producer'] = self.entry_producer.get()
+        if self.entry_creation_date != '':
+            self.pdf.fitz_doc.metadata['creationDate'] = self.entry_creation_date.get()
+        if self.entry_mod_date.get() != '':
+            self.pdf.fitz_doc.metadata['modDate'] = self.entry_mod_date.get()
+        if self.entry_encryption.get() != '':
+            self.pdf.fitz_doc.metadata['encryption'] = self.entry_encryption.get()
+            
+        self.pdf.fitz_doc.setMetadata(self.pdf.fitz_doc.metadata)
 
 class MainApplication(tk.Frame):
     def __init__(self, parent):
