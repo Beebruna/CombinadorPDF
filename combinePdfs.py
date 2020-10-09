@@ -1,22 +1,22 @@
 #Combina todos os PDFs de um diretório de trabalho atual em um único PDF
 
-import os, PyPDF2
+import PyPDF2
 
 #Função que pega/puxa os arquivos desejados
-def selectFiles(listFilesBox):
-    pdfFiles = listFilesBox #Lista que guardará os nomes de todos os arquivos PDF selecionados pelo usuário
+def selectFiles(listFileBox):
+    pdfFiles = list() #Lista que guardará os nomes de todos os arquivos PDF selecionados pelo usuário
     pdfWriter = PyPDF2.PdfFileWriter()  #Retorna somente um valor que representa um documento PDF ser criado em Python
                                         #Essa ação não criará o arquivo PDF propriamente dito
                                         #pdfWriter irá armazenar as páginas combinadas
                                         #Deve ser criado apenas uma única vez
 
-    for filename in os.listdir('.'): #retorna uma lista de todos os arquivos no diretório de trabalho atual
+    for filename in listFileBox: #retorna uma lista de todos os arquivos no diretório de trabalho atual
         if filename.endswith('.pdf'): #pega apenas os arquivos que tem a extensão .pdf do diretório
             pdfFiles.append(filename) #insere os arquivos pdf na lista pdfFiles
 
     return pdfFiles, pdfWriter
 '''
-Essa função precisa receber as listas selecionadas pelo usuário na interface gráfica
+Essa função precisa receber as listas selecionadas pelo usuário na interface gráfica quando ele clica no botão procurar arquivos
 '''
 
 #Quando o botão inserir é acionado, essa função é acionada
