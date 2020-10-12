@@ -139,7 +139,7 @@ class FrameInserir(tk.LabelFrame):
     
         # opçoes teste
         self.pdfFiles = self.combinadorPDF.openFileDirectory()
-        print(self.pdfFiles)
+        print(self.pdfFiles) #coloquei só para eu ver se pdfFiles tem arquivos
         self.selecionado = tk.StringVar()
         self.selecionado.set(self.pdfFiles[0])
         
