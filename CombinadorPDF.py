@@ -24,12 +24,12 @@ class CombinadorPDF:
 
         #retorna uma tupla com o NOME de um arquivo ou mais arquivos
         self.filename = filedialog.askopenfilenames(**self.opcoes) #filename é uma tupla que contém os caminhos dos arquivos selecionados
-        '''
+        
         for file in self.filename:
             self.pdfFiles.append(file)
 
         return self.pdfFiles
-        '''
+
 
     '''       
     #Quando o botão inserir é acionado, essa função é acionada
@@ -96,6 +96,7 @@ class FrameArquivos(tk.LabelFrame):
 
         # ------------------------------------- widgets ----------------------------------------
         self.botao_procurar = tk.Button(self, text='Procurar arquivos', command=self.combinadorPDF.openFileDirectory)
+        #a minha intenção é que quando o esse botão é pressionaso, a função openFileDirectory() da classe CombinadorPDF abra uma janela que permita o usuário procurar os arquivos que ele deseja inserir no programa. Essa função irá retornar uma lista de arquivos que o usuário escolheu. Depois eu passo essa lista para a classe FrameInserir, para que os arquivos sejam inseridos no menu de opções.
 
         # ------------------------------------- layout -----------------------------------------
         self.grid_columnconfigure(0, weight=1)
