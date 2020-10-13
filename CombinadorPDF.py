@@ -106,7 +106,7 @@ class FrameArquivos(tk.LabelFrame):
         #retorna uma tupla com o NOME de um arquivo ou mais arquivos
         self.filename = filedialog.askopenfilenames(**self.opcoes) #filename é uma tupla que contém os caminhos dos arquivos selecionados
 
-        self.frame_inserir.pdfFiles = list(self.filename)[:]#essa função está funcionando corretamente
+        self.frame_inserir.pdfFiles = list(self.filename)[:]
 
 
 #Parte em que os arquivos serão exibidos
