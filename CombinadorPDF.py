@@ -5,65 +5,56 @@ import PyPDF2
 
 class CombinadorPDF:
 
-    def __init__(self):
-        self.pdfFiles = list() #Lista que guardará os nomes de todos os arquivos PDF selecionados pelo usuário
-        #filename é uma tupla, então eu faço um casting de list
+    def __init__(self):#toda a classe terá o mesmo valor de atributo filename
+        
         self.pdfWriter = PyPDF2.PdfFileWriter()  #Retorna somente um valor que representa um documento PDF ser criado em Python
                         #Essa ação não criará o arquivo PDF propriamente dito
                         #pdfWriter irá armazenar as páginas combinadas
                         #Deve ser criado apenas uma única vez
-
-    #Recebe os arquivos selecionados pelo usuário quando ele clica no botão de Procurar Arquivos
-    def openFileDirectory(self):
-
-        #primeiro definimos as opções
-        self.opcoes = {} # as opções são definidas em um dicionário
-        self.opcoes['defaultextension'] = '.pdf' #adiciona a extensão pdf por padrão
-        self.opcoes['filetypes'] = [('Arquivos PDF', '.pdf')] #filtra os arquivos apenas para o formato pdf
-        self.opcoes['title'] = 'Diálogo que retorna o nome de um arquivo para ser aberto'
-
-        #retorna uma tupla com o NOME de um arquivo ou mais arquivos
-        self.filename = filedialog.askopenfilenames(**self.opcoes) #filename é uma tupla que contém os caminhos dos arquivos selecionados
-        
-        for file in self.filename:
-            self.pdfFiles.append(file)
-
-        return self.pdfFiles
-
-
-    '''       
+               
     #Quando o botão inserir é acionado, essa função é acionada
     #Tem a finalidade de armazenar as páginas desejadas pelo usuário
-    def insertPages(self, pdfFiles, option, positionFile):
+    def insertPages(self, interval, file, signe):
+        #type(interval) = list de inteiros
 
-        pdfFileObj = open(pdfFiles[positionFile], 'rb') #abre o arquivo PDF que o usuário escolheu, em modo de leitura binária 
-        pdfReader = PyPDF2.PdfFileReader(pdfFileObj) #pdfReader recebe um objeto PdfFileReader do arquivo PDF
+        self.pdfFileObj = open(file, 'rb') #abre o arquivo PDF que o usuário escolheu, em modo de leitura binária 
+        self.pdfReader = PyPDF2.PdfFileReader(self.pdfFileObj) #pdfReader recebe um objeto PdfFileReader do arquivo PDF
 
-        if option == 1: #Todas as páginas sáo selecionadas
-            for pageNum in range(pdfReader.numPages):#percorre todas as páginas do PDF
-                pageObj = pdfReader.getPage(pageNum) #pageObj recebe uma página específica
+        if signe == 1:
+            for pageNum in range(self.pdfReader.numPages):#percorre todas as páginas do PDF selecionado pelo usuário
+                pageObj = self.pdfReader.getPage(pageNum) #pageObj recebe uma página específica
                 self.pdfWriter.addPage(pageObj) #a página é adicionada em um objeto com valor de PDF
-        else: #apenas os intervalos desejados são selecionados
-            pagTotFiles = list() #Lista que guarda as páginas do intervalo que o usuário escolheu
-            #ainda não sei implementar
-            #lembrar que a contagem começa em zero, independentemente do número da página
+        else:
+            for e in interval:
 
-        return self.pdfWriter
+                if type(e) == 'int':
+
+                    pageObj = self.pdfReader.getPage(pageNum) #pageObj recebe uma página específica
+                    self.pdfWriter.addPage(pageObj) #a página é adicionada em um objeto com valor de PDF
+                else:
+                    for pageNum in range(e[0], e[1]+1):#percorre todas as páginas do intervalo selecionado pelo usuário
+                        pageObj = self.pdfReader.getPage(pageNum) #pageObj recebe uma página específica
+                        self.pdfWriter.addPage(pageObj) #a página é adicionada em um objeto com valor de PDF
+
 
     #Essa função é acionada quando o botão combinar é acionado
     #Tem a finalidade de combinar todos os arquivos selecionados em um novo PDF.
-    def combineFiles(self, pdfWriterTemp):
+    def combineFiles(self):
 
-        pdfOutputFile = open('combinePdfs.pdf', 'wb')
-        pdfWriterTemp.write(pdfOutputFile)
-        pdfOutputFile.close()
+        self.pdfOutputFile = open('combinePdfs.pdf', 'wb')
+        self.pdfWriter.write(self.pdfOutputFile)
+        self.pdfOutputFile.close()
 
-    '''
+
+#POO, conceito de herança
+#tk.Frame é a classe mãe/pai (super classe)
+#A classe MainApplication herda todos os métodos e atributos de sua classe mãe
+#ou seja, por padrão ela já possui todos os métodos e atributos de sua mãe, mas ela pode conter outros métodos e atributos que sua mãe não tem
 class MainApplication(tk.Frame):
 
     def __init__(self, master):
 
-        tk.Frame.__init__(self, master)
+        tk.Frame.__init__(self, master)#isso herda todos os atributos dado método construtor da classe mãe que foram sobrescritos pelo novo construtor
         self.master = master
         master.title('CombinadorPDF')
         
@@ -93,14 +84,29 @@ class FrameArquivos(tk.LabelFrame):
         tk.LabelFrame.__init__(self, master, text='Seleção de arquivos')
 
         self.combinadorPDF = master.combinadorPDF
+        self.frame_inserir = master.frame_inserir
 
         # ------------------------------------- widgets ----------------------------------------
-        self.botao_procurar = tk.Button(self, text='Procurar arquivos', command=self.combinadorPDF.openFileDirectory)
+        self.botao_procurar = tk.Button(self, text='Procurar arquivos', command=self.openFileDirectory)
         #a minha intenção é que quando o esse botão é pressionaso, a função openFileDirectory() da classe CombinadorPDF abra uma janela que permita o usuário procurar os arquivos que ele deseja inserir no programa. Essa função irá retornar uma lista de arquivos que o usuário escolheu. Depois eu passo essa lista para a classe FrameInserir, para que os arquivos sejam inseridos no menu de opções.
 
         # ------------------------------------- layout -----------------------------------------
         self.grid_columnconfigure(0, weight=1)
         self.botao_procurar.grid(row=0, column=0, padx=10, pady=10, sticky='WE')
+
+    #Recebe os arquivos selecionados pelo usuário quando ele clica no botão de Procurar
+    def openFileDirectory(self):
+
+        #primeiro definimos as opções
+        self.opcoes = {} # as opções são definidas em um dicionário
+        self.opcoes['defaultextension'] = '.pdf' #adiciona a extensão pdf por padrão
+        self.opcoes['filetypes'] = [('Arquivos PDF', '.pdf')] #filtra os arquivos apenas para o formato pdf
+        self.opcoes['title'] = 'Diálogo que retorna o nome de um arquivo para ser aberto'
+
+        #retorna uma tupla com o NOME de um arquivo ou mais arquivos
+        self.filename = filedialog.askopenfilenames(**self.opcoes) #filename é uma tupla que contém os caminhos dos arquivos selecionados
+
+        self.frame_inserir.pdfFiles = list(self.filename)[:]#essa função está funcionando corretamente
 
 
 #Parte em que os arquivos serão exibidos
@@ -130,18 +136,18 @@ class FrameVisualizar(tk.LabelFrame):
 #Parte em que os arquivos estarão disponíveis em uma lista
 class FrameInserir(tk.LabelFrame):
 
-    def __init__(self, master):
+    def __init__(self, master, file=None):
 
         self.master = master
         tk.LabelFrame.__init__(self, master, text='Arquivos Selecionados')
         
         self.combinadorPDF = master.combinadorPDF
-    
-        # opçoes teste
-        self.pdfFiles = self.combinadorPDF.openFileDirectory()
+
+        self.pdfFiles = file
         print(self.pdfFiles) #coloquei só para eu ver se pdfFiles tem arquivos
+
         self.selecionado = tk.StringVar()
-        self.selecionado.set(self.pdfFiles[0])
+        self.selecionado.set('Selecione um arquivo para ser editado')
         
         # ------------------------------------- widgets ----------------------------------------
         self.option_menu = tk.OptionMenu(self, self.selecionado, *self.pdfFiles)
@@ -149,11 +155,11 @@ class FrameInserir(tk.LabelFrame):
         
         #botão para selecionar Todas as Páginas
         self.botao_radio_todas = tk.Radiobutton(self, text='Todas as páginas', variable=self.selecionado, value=1)
-        self.frame_entry = tk.Frame(self)
+        self.frame_entry = tk.Frame(self) 
         
         #botão para selecionar um Intervalo as Páginas
         self.botao_radio_intervalo = tk.Radiobutton(self.frame_entry, text='Páginas:', variable=self.selecionado, value=2)
-        self.entry_paginas = tk.Entry(self.frame_entry, width=25)
+        self.entry_paginas = tk.Entry(self.frame_entry, width=25)#Caixa onde os intervalos serão inseridos pelo usuário
         self.label_exemplo = tk.Label(self.frame_entry, text='Exemplo: 1,5-9,12')
         self.botao_inserir = tk.Button(self, text='Inserir')
         
@@ -167,6 +173,28 @@ class FrameInserir(tk.LabelFrame):
         self.label_exemplo.grid(row=1, column=1, sticky='W')
         self.botao_inserir.grid(row=4, column=0, sticky='W', padx=20)
 
+    def click_button_pages(self):
+        self.signe = 1 #aqui será o sinal do botão escolhido
+        if self.signe == 1:
+            
+            self.combinadorPDF.insertPages(0, self.selecionado, self.signe)
+            #ver como funciona o botão radio e esse valor dele
+        else:
+            self.pages1 = self.entry_paginas.get().split(',')
+            self.pages2 = list() #vai receber o intervalo do tipo a-b
+            self.pages3 = list()
+
+            for i in self.pages1:
+                if i in '-':
+                    for j in i:
+                        if j not in '-': #isso sempre será 2 números, início - fim
+                            self.pages2.append(int(j))
+                    self.pages3.append(self.pages2)
+                else:
+                    self.pages3.append(int(i))
+
+            self.combinadorPDF.insertPages(self.pages3, self.selecionado, self.signe)#tem que enviar o intervalo das páginas e qual o arquivo
+
 
 class FrameCombinacao(tk.LabelFrame):
 
@@ -178,7 +206,7 @@ class FrameCombinacao(tk.LabelFrame):
         # ------------------------------------- widgets ----------------------------------------
         self.lista_arquivos = tk.Listbox(self, selectmode=tk.SINGLE)  # talvez adicionar scrollbar à lista
         self.frame_botoes = tk.Frame(self)
-        self.botao_baixar = tk.Button(self, text='Baixar')
+        self.botao_baixar = tk.Button(self, text='Combinar')
 
         # ------------------------------------- layout -----------------------------------------
         self.lista_arquivos.configure(width=40, height=13)
@@ -189,5 +217,5 @@ class FrameCombinacao(tk.LabelFrame):
 if __name__ == '__main__':
 
     root = tk.Tk()
-    MainApplication(root)
+    MainApplication(root).pack()
     root.mainloop()
