@@ -63,21 +63,22 @@ class FrameArquivos(tk.LabelFrame):
 
     def selecionar(self):
         filenames = filedialog.askopenfilenames()
-
 class FrameVisualizar(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
         tk.LabelFrame.__init__(self, master,
                                text='Visualizar')
 
-        # imagem teste
-        img = ImageTk.PhotoImage(Image.open('Screenshot_1.jpeg'))
 
         # widgets
-        self.label_imagem = tk.Label(self, image=img)
-        self.label_imagem.image = img
+        self.criar_pagina_branca()
+        self.label_imagem = tk.Label(self, image=self.pagina_branca)
+        self.label_imagem.image = self.pagina_branca
+        
         self.separator = ttk.Separator(self, orient=tk.HORIZONTAL)
+        
         self.scale = ttk.Scale(self)
+        
         self.botao_voltar = tk.Button(self, text='<')
         self.botao_avancar = tk.Button(self, text='>')
         self.label_pagina = tk.Label(self, text='Página 1 de ?')
@@ -86,27 +87,40 @@ class FrameVisualizar(tk.LabelFrame):
         self.label_imagem.grid(
             row=0, column=1,
             pady=10)
-        
+
         self.separator.grid(
             row=1, column=0,
             columnspan=3, sticky='WE',
             pady=10)
-        
+
         self.botao_voltar.grid(
             row=2, column=0,
             padx=10)
-        
+
         self.scale.grid(
             row=2, column=1,
             padx=10,
             sticky='WE')
-        
+
         self.botao_avancar.grid(
             row=2, column=2,
             padx=10)
-        
+
         self.label_pagina.grid(
             row=3, column=1)
+    
+    def criar_pagina_branca(self):
+        # cria pagina em branco
+        fitz_doc = fitz.open()
+        fitz_doc.newPage(0)
+        
+        pix = fitz_doc.getPagePixmap(0)
+        mode = 'RGBA' if pix.alpha else 'RGB'
+        image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+        image = image.resize((250, 350), Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(image)
+        
+        self.pagina_branca = img
 
 class FrameInserir(tk.LabelFrame):
     def __init__(self, master):
