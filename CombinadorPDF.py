@@ -2,88 +2,78 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 from PIL import ImageTk, Image
+import fitz
 
-class MainApplication(tk.Frame):
-    def __init__(self, master):
-        tk.Frame.__init__(self, master)
-        self.master = master
-        master.title('CombinadorPDF')
+class CombinadorPDF:
+    def __init__(self):
+        self.pdf_dict = {}
+        self.nome_arquivos = []
 
-        # widgets
-        self.frame_arquivos = FrameArquivos(self)
-        self.frame_visualizar = FrameVisualizar(self)
-        self.frame_inserir = FrameInserir(self)
-        self.frame_combinacao = FrameCombinacao(self)
+
+class PdfFile:
+    def __init__(self, fitz_doc):
+        self.fitz_doc = fitz_doc
+        self.extrair_imagens()
+
+    def extrair_imagens(self):
+        # extrai paginas do pdf como imagens
+        self.lista_imagens = []
         
-        # layout
-        self.grid_columnconfigure(0, weight=1)
-        
-        self.frame_arquivos.grid(
-            row=0, column=0,
-            padx=10, pady=5,
-            sticky='we')
-
-        self.frame_visualizar.grid(
-            row=1, column=0,
-            rowspan=7,
-            padx=10, pady=5,
-            ipadx=10, ipady=10)
-        
-        self.frame_inserir.grid(
-            row=0, column=1,
-            rowspan=3,
-            padx=10, pady=5,
-            ipadx=10, ipady=10)
-
-        self.frame_combinacao.grid(
-            row=3, column=1,
-            rowspan=5,
-            sticky='NSEW',
-            padx=10, pady=5)
+        for pagina in range(len(fitz_doc)):
+            pix = self.fitz_doc.getPagePixmap(pagina)
+            mode = 'RGBA' if pix.alpha else 'RGB'
+            image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+            image = image.resize((250, 350))
+#             image = image.resize((round(680/pix.height*pix.width), round(680)))
+            self.lista_imagens.append(ImageTk.PhotoImage(image))
 
 class FrameArquivos(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
-        tk.LabelFrame.__init__(self, master,
-                               text='Seleção de arquivos')
+        tk.LabelFrame.__init__(self, master, text='Seleção de arquivos')
 
-        # widgets
-        self.botao_procurar = tk.Button(self,
-                                        text='Procurar arquivos',
-                                        command=self.selecionar)
+        # ------------------------------------- widgets ----------------------------------------
 
-        # layout
-        self.grid_columnconfigure(
-            0, weight=1)
-        
+        self.botao_procurar = tk.Button(
+            self, text='Procurar arquivos',
+            command=selecionar_arquivos)
+
+        # ------------------------------------- layout ----------------------------------------
+
+        self.grid_columnconfigure(0, weight=1)
+
         self.botao_procurar.grid(
             row=0, column=0,
             padx=10, pady=10,
             sticky='WE')
+    
+    def selecionar_arquivos(self):
+        pass
 
-    def selecionar(self):
-        filenames = filedialog.askopenfilenames()
 class FrameVisualizar(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
-        tk.LabelFrame.__init__(self, master,
-                               text='Visualizar')
+        tk.LabelFrame.__init__(self, master, text='Visualizar')
 
+        # imagem em branco para ocupar espaço do label_imagem
+        image = Image.new('RGB', (250, 350), (255, 255, 255))
+        self.img = ImageTk.PhotoImage(image)
 
-        # widgets
-        self.criar_pagina_branca()
-        self.label_imagem = tk.Label(self, image=self.pagina_branca)
-        self.label_imagem.image = self.pagina_branca
-        
+        # ------------------------------------- widgets ----------------------------------------
+
+        self.label_imagem = tk.Label(self, image=self.img)
+        self.label_imagem.image = self.img
+
         self.separator = ttk.Separator(self, orient=tk.HORIZONTAL)
-        
+
         self.scale = ttk.Scale(self)
-        
+
         self.botao_voltar = tk.Button(self, text='<')
         self.botao_avancar = tk.Button(self, text='>')
         self.label_pagina = tk.Label(self, text='Página 1 de ?')
 
-        # layout
+        # ------------------------------------- layout ----------------------------------------
+
         self.label_imagem.grid(
             row=0, column=1,
             pady=10)
@@ -108,117 +98,108 @@ class FrameVisualizar(tk.LabelFrame):
 
         self.label_pagina.grid(
             row=3, column=1)
-    
-    def criar_pagina_branca(self):
-        # cria pagina em branco
-        fitz_doc = fitz.open()
-        fitz_doc.newPage(0)
-        
-        pix = fitz_doc.getPagePixmap(0)
-        mode = 'RGBA' if pix.alpha else 'RGB'
-        image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-        image = image.resize((250, 350), Image.ANTIALIAS)
-        img = ImageTk.PhotoImage(image)
-        
-        self.pagina_branca = img
+
 
 class FrameInserir(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
-        tk.LabelFrame.__init__(self, master, 
+        tk.LabelFrame.__init__(self, master,
                                text='Inserir arquivos')
-        
+
         # opçoes teste
         self.opcoes = ['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf']
-        
+
         self.selecionado = tk.StringVar()
         self.selecionado.set(self.opcoes[0])
-        
-        # widgets
+
+        # ------------------------------------- widgets ----------------------------------------
+
         self.option_menu = tk.OptionMenu(
             self,
             self.selecionado,
             *self.opcoes)
-        
+
         self.label_opcoes = tk.Label(
-            self, 
+            self,
             text='Páginas a serem inseridas:')
-        
+
         self.botao_radio_todas = tk.Radiobutton(
-            self, 
-            text='Todas as páginas', 
+            self,
+            text='Todas as páginas',
             variable=self.selecionado, value=1)
-        
+
         self.frame_entry = tk.Frame(self)
-        
+
         self.botao_radio_intervalo = tk.Radiobutton(
-            self.frame_entry, 
-            text='Páginas:', 
+            self.frame_entry,
+            text='Páginas:',
             variable=self.selecionado, value=2)
-        
+
         self.entry_paginas = tk.Entry(
             self.frame_entry,
             width=25)
-        
+
         self.label_exemplo = tk.Label(
-            self.frame_entry, 
+            self.frame_entry,
             text='Exemplo: 1,5-9,12')
-        
+
         self.botao_inserir = tk.Button(
             self,
             text='Inserir')
-        
-        # layout
+
+        # ------------------------------------- layout ----------------------------------------
+
         self.option_menu.grid(
             row=0, column=0,
             sticky='WE',
             padx=10, pady=5)
-        
+
         self.label_opcoes.grid(
             row=1, column=0,
             sticky='W',
             pady=5)
-        
+
         self.botao_radio_todas.grid(
             row=2, column=0,
             sticky='W')
-        
+
         self.frame_entry.grid(
             row=3, column=0)
-        
+
         self.botao_radio_intervalo.grid(row=0, column=0)
-        
+
         self.entry_paginas.grid(row=0, column=1)
-        
+
         self.label_exemplo.grid(
             row=1, column=1,
             sticky='W')
-        
+
         self.botao_inserir.grid(
             row=4, column=0,
             sticky='W', padx=20)
 
+
 class FrameCombinacao(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
-        tk.LabelFrame.__init__(self, master, 
+        tk.LabelFrame.__init__(self, master,
                                text='Arquivos combinados')
-        
-        # widgets
+
+        # ------------------------------------- widgets ----------------------------------------
+
         self.lista_arquivos = tk.Listbox(
-            self,
-            selectmode=tk.SINGLE)  # talvez adicionar scrollbar à lista
-        
+            self, selectmode=tk.SINGLE)  # talvez adicionar scrollbar à lista
+
         self.frame_botoes = tk.Frame(self)
-        
+
         self.botao_baixar = tk.Button(
-            self,
-            text='Baixar')
+            self, text='Baixar')
 
+        # ------------------------------------- layout ----------------------------------------
 
-        # layout
         self.lista_arquivos.configure(
             width=40, height=13)
+
         self.lista_arquivos.grid(
             row=0, column=0,
             padx=10, pady=10,
@@ -226,6 +207,46 @@ class FrameCombinacao(tk.LabelFrame):
 
         self.botao_baixar.grid(
             row=1, column=0)
+
+class MainApplication(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        self.master = master
+        master.title('CombinadorPDF')
+
+        # ------------------------------------- widgets ----------------------------------------
+        
+        self.frame_arquivos = FrameArquivos(self)
+        self.frame_visualizar = FrameVisualizar(self)
+        self.frame_inserir = FrameInserir(self)
+        self.frame_combinacao = FrameCombinacao(self)
+
+        # ------------------------------------- layout ----------------------------------------
+        
+        self.grid_columnconfigure(0, weight=1)
+
+        self.frame_arquivos.grid(
+            row=0, column=0,
+            padx=10, pady=5,
+            sticky='we')
+
+        self.frame_visualizar.grid(
+            row=1, column=0,
+            rowspan=7,
+            padx=10, pady=5,
+            ipadx=10, ipady=10)
+
+        self.frame_inserir.grid(
+            row=0, column=1,
+            rowspan=3,
+            padx=10, pady=5,
+            ipadx=10, ipady=10)
+
+        self.frame_combinacao.grid(
+            row=3, column=1,
+            rowspan=5,
+            sticky='NSEW',
+            padx=10, pady=5)
 
 if __name__ == '__main__':
     root = tk.Tk()
