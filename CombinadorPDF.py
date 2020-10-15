@@ -8,7 +8,7 @@ class CombinadorPDF:
     def __init__(self):
         self.pdf_dict = {}
         self.nome_arquivos = []
-
+        
 
 class PdfFile:
     def __init__(self, fitz_doc):
@@ -22,9 +22,8 @@ class PdfFile:
         for pagina in range(len(fitz_doc)):
             pix = self.fitz_doc.getPagePixmap(pagina)
             mode = 'RGBA' if pix.alpha else 'RGB'
-            image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-            image = image.resize((250, 350))
-#             image = image.resize((round(680/pix.height*pix.width), round(680)))
+            image = Image.frombytes(mode, [250, 350], pix.samples)
+#             image = image.resize((250, 350))
             self.lista_imagens.append(ImageTk.PhotoImage(image))
 
 class FrameArquivos(tk.LabelFrame):
@@ -36,7 +35,7 @@ class FrameArquivos(tk.LabelFrame):
 
         self.botao_procurar = tk.Button(
             self, text='Procurar arquivos',
-            command=selecionar_arquivos)
+            command=self.selecionar_arquivos)
 
         # ------------------------------------- layout ----------------------------------------
 
@@ -48,8 +47,25 @@ class FrameArquivos(tk.LabelFrame):
             sticky='WE')
     
     def selecionar_arquivos(self):
-        pass
-
+        # adiciona nome dos arquivos selecionados ao menuoption e ao combinadorpdf
+        
+        nome_arquivos = filedialog.askopenfilenames(
+            filetypes=[('Arquivos PDF', '*.pdf')])
+        
+        for nome_arquivo in nome_arquivos:
+            if nome_arquivo not in self.master.combinadorPdf.nome_arquivos:
+                self.master.combinadorPdf.nome_arquivos.append(nome_arquivo)
+                self.master.combinadorPdf.pdf_dict[nome_arquivo] = fitz.open(nome_arquivo)                
+                self.master.frame_inserir.opcoes.append(nome_arquivo)
+                
+        # atualizando menuoption
+        self.master.frame_inserir.selecionado = ''
+        self.master.frame_inserir.option_menu['menu'].delete(0, 'end')
+        self.master.frame_inserir.opcoes.sort(key=str.lower)
+        
+        for opcao in self.master.frame_inserir.opcoes:
+            self.master.frame_inserir.option_menu['menu'].add_command(label=opcao)
+        
 class FrameVisualizar(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
@@ -103,49 +119,38 @@ class FrameVisualizar(tk.LabelFrame):
 class FrameInserir(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
-        tk.LabelFrame.__init__(self, master,
-                               text='Inserir arquivos')
+        tk.LabelFrame.__init__(self, master, text='Inserir arquivos')
 
-        # opçoes teste
-        self.opcoes = ['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf']
-
+        self.opcoes = []
         self.selecionado = tk.StringVar()
-        self.selecionado.set(self.opcoes[0])
+        self.selecionado.set('Escolha um arquivo para editar')
 
         # ------------------------------------- widgets ----------------------------------------
 
         self.option_menu = tk.OptionMenu(
-            self,
-            self.selecionado,
-            *self.opcoes)
+            self, self.selecionado, [])
 
         self.label_opcoes = tk.Label(
-            self,
-            text='Páginas a serem inseridas:')
+            self, text='Páginas a serem inseridas:')
 
         self.botao_radio_todas = tk.Radiobutton(
-            self,
-            text='Todas as páginas',
+            self, text='Todas as páginas',
             variable=self.selecionado, value=1)
 
         self.frame_entry = tk.Frame(self)
 
         self.botao_radio_intervalo = tk.Radiobutton(
-            self.frame_entry,
-            text='Páginas:',
+            self.frame_entry, text='Páginas:',
             variable=self.selecionado, value=2)
 
         self.entry_paginas = tk.Entry(
-            self.frame_entry,
-            width=25)
+            self.frame_entry, width=25)
 
         self.label_exemplo = tk.Label(
-            self.frame_entry,
-            text='Exemplo: 1,5-9,12')
+            self.frame_entry, text='Exemplo: 1,5-9,12')
 
         self.botao_inserir = tk.Button(
-            self,
-            text='Inserir')
+            self, text='Inserir')
 
         # ------------------------------------- layout ----------------------------------------
 
@@ -214,11 +219,13 @@ class MainApplication(tk.Frame):
         self.master = master
         master.title('CombinadorPDF')
 
+        self.combinadorPdf = CombinadorPDF()
+        
         # ------------------------------------- widgets ----------------------------------------
         
+        self.frame_inserir = FrameInserir(self) 
         self.frame_arquivos = FrameArquivos(self)
         self.frame_visualizar = FrameVisualizar(self)
-        self.frame_inserir = FrameInserir(self)
         self.frame_combinacao = FrameCombinacao(self)
 
         # ------------------------------------- layout ----------------------------------------
