@@ -19,11 +19,11 @@ class PdfFile:
         # extrai paginas do pdf como imagens
         self.lista_imagens = []
         
-        for pagina in range(len(fitz_doc)):
+        for pagina in range(len(self.fitz_doc)):
             pix = self.fitz_doc.getPagePixmap(pagina)
             mode = 'RGBA' if pix.alpha else 'RGB'
-            image = Image.frombytes(mode, [250, 350], pix.samples)
-#             image = image.resize((250, 350))
+            image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+            image = image.resize((250, 350))
             self.lista_imagens.append(ImageTk.PhotoImage(image))
 
 class FrameArquivos(tk.LabelFrame):
@@ -59,12 +59,12 @@ class FrameArquivos(tk.LabelFrame):
                 self.master.frame_inserir.opcoes.append(nome_arquivo)
                 
         # atualizando menuoption
-        self.master.frame_inserir.selecionado = ''
         self.master.frame_inserir.option_menu['menu'].delete(0, 'end')
         self.master.frame_inserir.opcoes.sort(key=str.lower)
         
         for opcao in self.master.frame_inserir.opcoes:
-            self.master.frame_inserir.option_menu['menu'].add_command(label=opcao)
+            self.master.frame_inserir.option_menu['menu'].add_command(
+                label=opcao, command=lambda escolhido=opcao: self.master.frame_visualizar.visualizar(escolhido))
         
 class FrameVisualizar(tk.LabelFrame):
     def __init__(self, master):
@@ -115,14 +115,65 @@ class FrameVisualizar(tk.LabelFrame):
         self.label_pagina.grid(
             row=3, column=1)
 
+    def visualizar(self, escolhido):
+        # coloca pagina no pdf no label_imagem e atualiza widgets
+        
+        self.pdfFile = PdfFile(self.master.combinadorPdf.pdf_dict[escolhido])
+        
+        self.label_imagem.configure(image=self.pdfFile.lista_imagens[0])
+        self.label_imagem.image = self.pdfFile.lista_imagens[0]
+        
+        self.label_pagina.configure(text='Página 1 de {}'.format(len(self.pdfFile.fitz_doc)))
+        
+        self.scale.configure(
+            from_=1, to=len(self.pdfFile.fitz_doc),
+            command=lambda pagina: self.atualizar_pagina(pagina, 'scale'))
+        
+        self.botao_voltar.configure(
+            command=lambda: self.atualizar_pagina(self.scale.get() - 2),
+            state=tk.DISABLED)
+        
+        self.botao_avancar.configure(
+            command=lambda: self.atualizar_pagina(self.scale.get()))
+        
+    def atualizar_pagina(self, pagina, widget='botao'):
+        # atualiza a pagina, mudando a imagem exibida e atualizando widgets
+        
+    
+        # verificando de qual widget vem o comando
+        if widget == 'scale':
+            pagina = int(pagina.split('.')[0])
+            pagina = pagina - 1
+        else:
+            pagina = int(pagina)
+            self.scale.set(pagina + 1)
+            
+        # atualizando imagem e mantendo segunda referencia
+        self.label_imagem.configure(image=self.pdfFile.lista_imagens[pagina])
+        self.label_imagem.image = self.pdfFile.lista_imagens[pagina]
 
+        self.label_pagina.configure(text='Página {} de {}'.format(
+           pagina + 1, len(self.pdfFile.fitz_doc)))
+        
+        # atualizando estado dos botoes
+        if pagina == 0:
+            self.botao_voltar.configure(state=tk.DISABLED)
+        else:
+            self.botao_voltar.configure(state=tk.NORMAL)
+
+        if pagina == len(self.pdfFile.fitz_doc) - 1:
+            self.botao_avancar.configure(state=tk.DISABLED)
+        else:
+            self.botao_avancar.configure(state=tk.NORMAL)
+        
+        
 class FrameInserir(tk.LabelFrame):
     def __init__(self, master):
         self.master = master
         tk.LabelFrame.__init__(self, master, text='Inserir arquivos')
 
         self.opcoes = []
-        self.selecionado = tk.StringVar()
+        self.selecionado = tk.StringVar(self)
         self.selecionado.set('Escolha um arquivo para editar')
 
         # ------------------------------------- widgets ----------------------------------------
@@ -223,9 +274,9 @@ class MainApplication(tk.Frame):
         
         # ------------------------------------- widgets ----------------------------------------
         
-        self.frame_inserir = FrameInserir(self) 
-        self.frame_arquivos = FrameArquivos(self)
+        self.frame_inserir = FrameInserir(self)   
         self.frame_visualizar = FrameVisualizar(self)
+        self.frame_arquivos = FrameArquivos(self)
         self.frame_combinacao = FrameCombinacao(self)
 
         # ------------------------------------- layout ----------------------------------------
