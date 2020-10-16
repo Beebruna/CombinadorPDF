@@ -13,6 +13,15 @@ class CombinadorPDF:
         # adiciona arquivo os atributos
         self.nome_arquivos.append(nome_arquivo)
         self.pdf_dict[nome_arquivo] = fitz_doc
+        
+    def baixar(self, filename):
+        # combina os pdfs e baixa
+        
+        self.fitz_doc_combinado = fitz.open()
+        for nome_arquivo in self.nome_arquivos:
+            self.fitz_doc_combinado.insertPDF(self.pdf_dict[nome_arquivo])
+            
+        self.fitz_doc_combinado.save(filename)
 
 class PdfFile:
     def __init__(self, fitz_doc):
@@ -230,10 +239,10 @@ class FrameInserir(tk.LabelFrame):
             self, text='Inserir', command=self.inserir)
 
         # ------------------------------------- layout ----------------------------------------
-
+        
         self.option_menu.grid(
             row=0, column=0,
-            sticky='WE',
+            sticky='W',
             padx=10, pady=5)
 
         self.label_opcoes.grid(
@@ -269,14 +278,14 @@ class FrameInserir(tk.LabelFrame):
         if opcao_selecionada == 'TODAS':
             self.master.combinadorPdf.adicionar_arquivo(
                 self.master.frame_visualizar.nome_escolhido,
-                self.master.frame_visualizar.pdfFile)
+                self.master.frame_visualizar.pdfFile.fitz_doc)
         else:
             self.master.frame_visualizar.pdfFile.selecionar_paginas(
                 self.entry_paginas.get())
             
             self.master.combinadorPdf.adicionar_arquivo(
                 self.master.frame_visualizar.nome_escolhido,
-                self.master.frame_visualizar.pdfFile)
+                self.master.frame_visualizar.pdfFile.fitz_doc)
         
         # excluindo de optionmenu e adicionando a listbox
         index = self.option_menu['menu'].index(self.selecionado.get())
@@ -303,7 +312,8 @@ class FrameCombinacao(tk.LabelFrame):
         self.frame_botoes = tk.Frame(self)
 
         self.botao_baixar = tk.Button(
-            self, text='Baixar')
+            self, text='Baixar',
+            command=self.baixar)
 
         # ------------------------------------- layout ----------------------------------------
 
@@ -317,7 +327,19 @@ class FrameCombinacao(tk.LabelFrame):
 
         self.botao_baixar.grid(
             row=1, column=0)
-
+        
+    def baixar(self):
+        # abre dialogo para nome do arquivo e baixa o arquivo
+        nome_arquivo = filedialog.asksaveasfilename()
+        
+        if not nome_arquivo:
+            return
+        
+        if not nome_arquivo.endswith('.pdf'):
+            nome_arquivo += '.pdf'
+            
+        self.master.combinadorPdf.baixar(nome_arquivo)
+        
 class MainApplication(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
@@ -336,7 +358,7 @@ class MainApplication(tk.Frame):
         # ------------------------------------- layout ----------------------------------------
         
         self.grid_columnconfigure(0, weight=1)
-
+    
         self.frame_arquivos.grid(
             row=0, column=0,
             padx=10, pady=5,
