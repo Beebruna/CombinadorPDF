@@ -6,20 +6,21 @@ import fitz
 
 class CombinadorPDF:
     def __init__(self):
-        self.pdf_dict = {}
+        self.fitz_docs = []
         self.nome_arquivos = []
         
     def adicionar_arquivo(self, nome_arquivo, fitz_doc):
         # adiciona arquivo os atributos
         self.nome_arquivos.append(nome_arquivo)
-        self.pdf_dict[nome_arquivo] = fitz_doc
+        self.fitz_docs.append(fitz_doc)
         
     def baixar(self, filename):
         # combina os pdfs e baixa
         
         self.fitz_doc_combinado = fitz.open()
-        for nome_arquivo in self.nome_arquivos:
-            self.fitz_doc_combinado.insertPDF(self.pdf_dict[nome_arquivo])
+        
+        for fitz_doc in self.fitz_docs:
+            self.fitz_doc_combinado.insertPDF(fitz_doc)
             
         self.fitz_doc_combinado.save(filename)
 
@@ -85,8 +86,7 @@ class FrameArquivos(tk.LabelFrame):
         
         # atualizando objeto combinadorPdf
         for nome_arquivo in nome_arquivos:
-            if nome_arquivo not in self.master.combinadorPdf.nome_arquivos:              
-                self.master.frame_inserir.opcoes.append(nome_arquivo)
+            self.master.frame_inserir.opcoes.append(nome_arquivo)
                 
         # atualizando menuoption
         self.master.frame_inserir.option_menu['menu'].delete(0, 'end')
@@ -207,9 +207,10 @@ class FrameInserir(tk.LabelFrame):
 
         self.opcoes = []
         self.selecionado = tk.StringVar()
-        self.selecionado.set('Escolha um arquivo para editar')
+        self.selecionado.set('Adicione um arquivo para editar')
         
         self.selecionado_radio = tk.StringVar()
+        self.selecionado_radio.set('TODAS')
         
         # ------------------------------------- widgets ----------------------------------------
 
@@ -296,7 +297,13 @@ class FrameInserir(tk.LabelFrame):
         # voltando para o padrao
         self.master.frame_visualizar.label_imagem.configure(image=self.master.frame_visualizar.img)
         self.master.frame_visualizar.label_imagem.image = self.master.frame_visualizar.img
-        self.selecionado.set('Escolha um arquivo para editar')
+        
+        self.opcoes.remove(self.selecionado.get())
+        
+        if len(self.opcoes) == 0:
+            self.selecionado.set('Adicione um arquivo para editar')
+        else:
+            self.selecionado.set(self.opcoes[0])
         
 class FrameCombinacao(tk.LabelFrame):
     def __init__(self, master):
@@ -316,17 +323,13 @@ class FrameCombinacao(tk.LabelFrame):
             command=self.baixar)
 
         # ------------------------------------- layout ----------------------------------------
+        
+        self.lista_arquivos.pack(
+            padx=10, pady=5,
+            fill=tk.BOTH, expand=True)
+        
+        self.botao_baixar.pack(pady=10)
 
-        self.lista_arquivos.configure(
-            width=40, height=13)
-
-        self.lista_arquivos.grid(
-            row=0, column=0,
-            padx=10, pady=10,
-            sticky='NSEW')
-
-        self.botao_baixar.grid(
-            row=1, column=0)
         
     def baixar(self):
         # abre dialogo para nome do arquivo e baixa o arquivo
