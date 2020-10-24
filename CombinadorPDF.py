@@ -10,24 +10,22 @@ class CombinadorPDF:
         self.fitz_docs = []
         self.nome_arquivos = []
 
-    def adicionar_arquivo(self, nome_arquivo, fitz_doc):
+    def adicionar_arquivo(self, pdfFile):
         # adiciona arquivo os atributos
-        self.nome_arquivos.append(nome_arquivo)
-        self.fitz_docs.append(fitz_doc)
+        self.nome_arquivos.append(pdfFile.nome_arquivo)
+        self.fitz_docs.append(pdfFile.fitz_doc)
 
-    def baixar(self, filename):
-        # combina os pdfs e baixa
-
-        self.fitz_doc_combinado = fitz.open()
-
+    def combinar(self):
+        # combina os pdfs armazenados em fitz_docs
+        fitz_doc_combinado = fitz.open()
         for fitz_doc in self.fitz_docs:
-            self.fitz_doc_combinado.insertPDF(fitz_doc)
-
-        self.fitz_doc_combinado.save(filename)
+            fitz_doc_combinado.insertPDF(fitz_doc)
+        return fitz_doc_combinado
 
 
 class PdfFile:
-    def __init__(self, fitz_doc):
+    def __init__(self, fitz_doc, nome_arquivo=None):
+        self.nome_arquivo = nome_arquivo
         self.fitz_doc = fitz_doc
         self.lista_imagens = self.extrair_imagens()
 
@@ -61,53 +59,12 @@ class PdfFile:
         self.lista_imagens = self.extrair_imagens()
 
 
-class FrameArquivos(tk.LabelFrame):
-    def __init__(self, master):
+class FrameVisualizarPdf(tk.LabelFrame):
+    def __init__(self, master, pdfFile=None, dimensao=(250, 350)):
         self.master = master
-        tk.LabelFrame.__init__(self, master, text='Seleção de arquivos')
-
-        # ------------------------------------- widgets ----------------------------------------
-
-        self.botao_procurar = tk.Button(
-            self, text='Procurar arquivos',
-            command=self.selecionar_arquivos)
-
-        # ------------------------------------- layout ----------------------------------------
-
-        self.grid_columnconfigure(0, weight=1)
-
-        self.botao_procurar.grid(
-            row=0, column=0,
-            padx=10, pady=10,
-            sticky='WE')
-
-    def selecionar_arquivos(self):
-        # adiciona nome dos arquivos selecionados ao menuoption e ao combinadorpdf
-
-        nome_arquivos = filedialog.askopenfilenames(
-            filetypes=[('Arquivos PDF', '*.pdf')])
-
-        # atualizando objeto combinadorPdf
-        for nome_arquivo in nome_arquivos:
-            self.master.frame_inserir.opcoes.append(nome_arquivo)
-
-        # atualizando menuoption
-        self.master.frame_inserir.option_menu['menu'].delete(0, 'end')
-        self.master.frame_inserir.opcoes.sort(key=str.lower)
-
-        for opcao in self.master.frame_inserir.opcoes:
-            self.master.frame_inserir.option_menu['menu'].add_command(
-                label=opcao, command=lambda escolhido=opcao: self.master.frame_visualizar.visualizar(escolhido))
-
-
-class FrameVisualizar(tk.LabelFrame):
-    def __init__(self, master):
-        self.master = master
-        tk.LabelFrame.__init__(self, master, text='Visualizar')
-
-        # imagem em branco para ocupar espaço do label_imagem
-        image = Image.new('RGB', (250, 350), (255, 255, 255))
-        self.img = ImageTk.PhotoImage(image)
+        tk.LabelFrame.__init__(self, master, text='Visualizar arquivo')
+        
+        self.pdfFile = pdfFile
 
         # ------------------------------------- widgets ----------------------------------------
 
@@ -121,8 +78,14 @@ class FrameVisualizar(tk.LabelFrame):
         self.botao_avancar = tk.Button(self, text='>')
         self.label_pagina = tk.Label(self)
 
-        self.widgets_padrao()
-
+        if not pdfFile:
+            # imagem em branco para ocupar espaço do label imagem
+            image = Image.new('RGB', dimensao, (255, 255, 255))
+            self.img = ImageTk.PhotoImage(image)
+            self.widgets_padrao()
+        else:
+            self.visualizar()
+            
         # ------------------------------------- layout ----------------------------------------
 
         self.label_imagem.grid(
@@ -140,8 +103,7 @@ class FrameVisualizar(tk.LabelFrame):
 
         self.scale.grid(
             row=2, column=1,
-            padx=10,
-            sticky='WE')
+            padx=10, sticky='WE')
 
         self.botao_avancar.grid(
             row=2, column=2,
@@ -150,14 +112,24 @@ class FrameVisualizar(tk.LabelFrame):
         self.label_pagina.grid(
             row=3, column=1)
 
-    def visualizar(self, escolhido):
-        # coloca pagina no pdf no label_imagem e atualiza widgets
-        # inicializacao na primeira pagina
+    def widgets_padrao(self):
+        # volta os widgets para o padrao quando nao tem nenhum pdf a mostra
+        self.scale.set(1)
+        self.scale.configure(state=tk.DISABLED)
 
-        self.master.frame_inserir.selecionado.set(escolhido)
+        self.botao_avancar.configure(state=tk.DISABLED)
+        self.botao_voltar.configure(state=tk.DISABLED)
 
-        self.nome_escolhido = escolhido
-        self.pdfFile = PdfFile(fitz.open(escolhido))
+        self.label_pagina.configure(text='Página 1 de ?')
+
+        self.label_imagem.configure(
+            image=self.img)
+        self.label_imagem.image = self.img
+
+    def visualizar(self, nome_arquivo=None):
+        # inicializa a visualizacao do pdf
+        if not self.pdfFile:
+            self.pdfFile = PdfFile(fitz.open(nome_arquivo))
 
         self.label_imagem.configure(image=self.pdfFile.lista_imagens[0])
         self.label_imagem.image = self.pdfFile.lista_imagens[0]
@@ -172,7 +144,7 @@ class FrameVisualizar(tk.LabelFrame):
         self.botao_voltar.configure(
             command=lambda: self.atualizar_pagina(self.scale.get() - 2),
             state=tk.DISABLED)
-        
+
         self.scale.configure(state=tk.NORMAL)
 
         self.botao_avancar.configure(
@@ -182,7 +154,7 @@ class FrameVisualizar(tk.LabelFrame):
     def atualizar_pagina(self, pagina, widget='botao'):
         # atualiza a pagina, mudando a imagem exibida e atualizando widgets
 
-        # verificando de qual widget vem o comando
+        # argumento pagina vem diferente dependendo do widget
         if widget == 'scale':
             pagina = int(pagina.split('.')[0])
             pagina = pagina - 1
@@ -208,161 +180,60 @@ class FrameVisualizar(tk.LabelFrame):
         else:
             self.botao_avancar.configure(state=tk.NORMAL)
 
-    def widgets_padrao(self):
-        # volta os widgets para o padrao quando nao tem nenhum pdf a mostra
-        self.scale.set(1)   
-        self.scale.configure(state=tk.DISABLED)
-        
-        self.botao_avancar.configure(state=tk.DISABLED)
-        self.botao_voltar.configure(state=tk.DISABLED)
-        
-        self.label_pagina.configure(text='Página 1 de ?')
-        
-        self.label_imagem.configure(
-            image=self.img)
-        self.label_imagem.image = self.img        
-            
-class FrameInserir(tk.LabelFrame):
-    def __init__(self, master):
-        self.master = master
-        tk.LabelFrame.__init__(self, master, text='Inserir arquivos')
 
-        self.opcoes = []
-        self.selecionado = tk.StringVar()
-        self.selecionado.set('Adicione um arquivo para editar')
+class WindowBaixar(tk.Toplevel):
+    def __init__(self, pdfFile=None):
+        tk.Toplevel.__init__(self)
 
-        self.selecionado_radio = tk.StringVar()
-        self.selecionado_radio.set('TODAS')
+        self.pdfFile = pdfFile
 
         # ------------------------------------- widgets ----------------------------------------
 
-        self.option_menu = tk.OptionMenu(
-            self, self.selecionado, self.opcoes)
+        self.frame_visualizar_pdf = FrameVisualizarPdf(
+            self, pdfFile, dimensao=(400, 560))
 
-        self.label_opcoes = tk.Label(
-            self, text='Páginas a serem inseridas:')
+        self.frame_metadados = tk.LabelFrame(
+            self, text='Editar metadados')
 
-        self.botao_radio_todas = tk.Radiobutton(
-            self, text='Todas as páginas',
-            variable=self.selecionado_radio, value='TODAS')
+        self.init_metadados_widgets()
 
-        self.frame_entry = tk.Frame(self)
-
-        self.botao_radio_intervalo = tk.Radiobutton(
-            self.frame_entry, text='Páginas:',
-            variable=self.selecionado_radio, value='SELECIONADAS')
-
-        self.entry_paginas = tk.Entry(
-            self.frame_entry, width=25)
-
-        self.label_exemplo = tk.Label(
-            self.frame_entry, text='Exemplo: 1,5-9,12')
-
-        self.botao_inserir = tk.Button(
-            self, text='Inserir', command=self.inserir)
+        self.botao_concluir = tk.Button(
+            self, text='Escolher diretório e baixar', command=self.salvar)
 
         # ------------------------------------- layout ----------------------------------------
 
-        self.option_menu.grid(
+        self.frame_visualizar_pdf.grid(
             row=0, column=0,
-            sticky='W',
-            padx=10, pady=5)
+            sticky='N', padx=5, pady=10)
 
-        self.label_opcoes.grid(
+        self.frame_metadados.grid(
+            row=0, column=1,
+            rowspan=2, padx=5, pady=5)
+
+        self.botao_concluir.grid(
             row=1, column=0,
-            sticky='W',
-            pady=5)
+            sticky='EW', padx=5, pady=5)
 
-        self.botao_radio_todas.grid(
-            row=2, column=0,
-            sticky='W')
+    def init_metadados_widgets(self):
+        # loop pelo dicionario metadata e cria widgets de acordo
+        self.entries = {}
 
-        self.frame_entry.grid(
-            row=3, column=0,
-            sticky='W')
+        for key, value in self.pdfFile.fitz_doc.metadata.items():
+            frame = tk.Frame(self.frame_metadados)
+            label = tk.Label(frame, text=key.capitalize())
+            entry = tk.Entry(frame, width=50)
 
-        self.botao_radio_intervalo.grid(row=0, column=0)
+            if self.pdfFile.fitz_doc.metadata[key]:
+                entry.insert(0, self.pdfFile.fitz_doc.metadata[key])
 
-        self.entry_paginas.grid(row=0, column=1)
+            frame.pack(pady=15)
+            label.pack()
+            entry.pack()
 
-        self.label_exemplo.grid(
-            row=1, column=1,
-            sticky='W')
+            self.entries[key] = entry
 
-        self.botao_inserir.grid(
-            row=4, column=0,
-            sticky='W', padx=20)
-
-    def inserir(self):
-        # insere o pdf de acordo com a opçao selecionada
-
-        opcao_selecionada = self.selecionado_radio.get()
-
-        if opcao_selecionada == 'TODAS':
-            self.master.combinadorPdf.adicionar_arquivo(
-                self.master.frame_visualizar.nome_escolhido,
-                self.master.frame_visualizar.pdfFile.fitz_doc)
-        else:
-            self.master.frame_visualizar.pdfFile.selecionar_paginas(
-                self.entry_paginas.get())
-
-            self.master.combinadorPdf.adicionar_arquivo(
-                self.master.frame_visualizar.nome_escolhido,
-                self.master.frame_visualizar.pdfFile.fitz_doc)
-
-        # excluindo de optionmenu e adicionando a listbox
-        index = self.option_menu['menu'].index(self.selecionado.get())
-        self.option_menu['menu'].delete(index)
-
-        self.master.frame_combinacao.lista_arquivos.insert(
-            tk.END, self.selecionado.get())
-
-        self.opcoes.remove(self.selecionado.get())
-
-        if len(self.opcoes) == 0:
-            self.selecionado.set('Adicione um arquivo para editar')
-        else:
-            self.selecionado.set(self.opcoes[0])
-            
-        self.master.frame_visualizar.widgets_padrao()        
-        
-
-class FrameCombinacao(tk.LabelFrame):
-    def __init__(self, master):
-        self.master = master
-        tk.LabelFrame.__init__(self, master,
-                               text='Arquivos combinados')
-
-        # ------------------------------------- widgets ----------------------------------------
-
-        self.lista_arquivos = tk.Listbox(
-            self, selectmode=tk.SINGLE)  # talvez adicionar scrollbar à lista
-
-        self.frame_botoes = tk.Frame(self)
-
-        self.botao_baixar = tk.Button(
-            self, text='Baixar',
-            command=self.baixar)
-
-        # ------------------------------------- layout ----------------------------------------
-
-        self.lista_arquivos.pack(
-            padx=10, pady=5,
-            fill=tk.BOTH, expand=True)
-
-        self.botao_baixar.pack(pady=10)
-
-    def baixar(self):
-        # abre dialogo para nome do arquivo e baixa o arquivo
-        nome_arquivo = filedialog.asksaveasfilename()
-
-        if not nome_arquivo:
-            return
-
-        if not nome_arquivo.endswith('.pdf'):
-            nome_arquivo += '.pdf'
-
-        self.master.combinadorPdf.baixar(nome_arquivo)
+    def salvar(self):
+        pass
 
 
 class MainApplication(tk.Frame):
@@ -372,40 +243,178 @@ class MainApplication(tk.Frame):
         master.title('CombinadorPDF')
 
         self.combinadorPdf = CombinadorPDF()
+        self.inicializacao_widgets()
 
-        # ------------------------------------- widgets ----------------------------------------
+    def inicializacao_widgets(self):
 
-        self.frame_combinacao = FrameCombinacao(self)
-        self.frame_visualizar = FrameVisualizar(self)
-        self.frame_inserir = FrameInserir(self)
-        self.frame_arquivos = FrameArquivos(self)
+        # --- frame arquivos --------------------------------------
 
-        # ------------------------------------- layout ----------------------------------------
+        self.frame_arquivos = tk.LabelFrame(
+            self, text='Seleção de arquivos')
 
-        self.grid_columnconfigure(0, weight=1)
+        self.botao_procurar = tk.Button(
+            self.frame_arquivos, text='Procurar arquivos',
+            command=self.botao_procurar_command)
+
+        self.frame_arquivos.grid_columnconfigure(0, weight=1)
+        self.botao_procurar.grid(
+            row=0, column=0,
+            padx=10, pady=10,
+            sticky='WE')
 
         self.frame_arquivos.grid(
             row=0, column=0,
-            padx=10, pady=5,
-            sticky='we')
+            padx=10, pady=5, sticky='we')
 
-        self.frame_visualizar.grid(
+        # --- frame inserir --------------------------------------
+
+        self.frame_inserir = tk.LabelFrame(
+            self, text='Edição de arquivos')
+
+        self.opcoes = []
+        self.selecionado_menu = tk.StringVar()
+        self.selecionado_menu.set('Adicione um arquivo para editar')
+
+        self.selecionado_radio = tk.StringVar()
+        self.selecionado_radio.set('TODAS')
+
+        self.option_menu = tk.OptionMenu(
+            self.frame_inserir, self.selecionado_menu, self.opcoes)
+
+        self.label_opcoes = tk.Label(
+            self.frame_inserir, text='Páginas a serem inseridas:')
+
+        self.botao_radio_todas = tk.Radiobutton(
+            self.frame_inserir, text='Todas as páginas',
+            variable=self.selecionado_radio, value='TODAS')
+
+        self.frame_botao_intervalo = tk.Frame(self.frame_inserir)
+
+        self.botao_radio_intervalo = tk.Radiobutton(
+            self.frame_botao_intervalo, text='Páginas:',
+            variable=self.selecionado_radio, value='SELECIONADAS')
+
+        self.entry_paginas = tk.Entry(
+            self.frame_botao_intervalo, width=25)
+
+        self.label_exemplo = tk.Label(
+            self.frame_botao_intervalo, text='Exemplo: 1,5-9,12')
+
+        self.botao_inserir = tk.Button(
+            self.frame_inserir, text='Inserir', command=self.botao_inserir_command)
+
+        self.option_menu.grid(
+            row=0, column=0,
+            sticky='W', padx=10, pady=5)
+
+        self.label_opcoes.grid(
             row=1, column=0,
-            rowspan=7,
-            padx=10, pady=5,
-            ipadx=10, ipady=10)
+            sticky='W', pady=5)
+
+        self.botao_radio_todas.grid(
+            row=2, column=0,
+            sticky='W')
+
+        self.frame_botao_intervalo.grid(
+            row=3, column=0,
+            sticky='W')
+
+        self.botao_radio_intervalo.grid(
+            row=0, column=0)
+
+        self.entry_paginas.grid(
+            row=0, column=1)
+
+        self.label_exemplo.grid(
+            row=1, column=1,
+            sticky='W')
+
+        self.botao_inserir.grid(
+            row=4, column=0,
+            sticky='W', padx=20)
 
         self.frame_inserir.grid(
             row=0, column=1,
-            rowspan=3,
-            padx=10, pady=5,
-            ipadx=10, ipady=10)
+            rowspan=3, padx=10, pady=5, ipadx=10, ipady=10)
 
-        self.frame_combinacao.grid(
+        # --- frame visualizar --------------------------------------
+
+        self.frame_visualizar_pdf = FrameVisualizarPdf(self)
+        self.frame_visualizar_pdf.grid(
+            row=1, column=0,
+            rowspan=7, padx=10, pady=5, ipadx=10, ipady=10)
+
+        # --- frame combinar --------------------------------------
+
+        self.frame_combinar = tk.LabelFrame(
+            self, text='Arquivos a serem combinados')
+
+        self.lista_arquivos = tk.Listbox(
+            self.frame_combinar, selectmode=tk.SINGLE)
+
+        self.botao_baixar = tk.Button(
+            self.frame_combinar, text='Baixar',
+            command=self.botao_baixar_command)
+
+        self.lista_arquivos.pack(
+            padx=10, pady=5,
+            fill=tk.BOTH, expand=True)
+
+        self.botao_baixar.pack(pady=10)
+
+        self.frame_combinar.grid(
             row=3, column=1,
-            rowspan=5,
-            sticky='NSEW',
-            padx=10, pady=5)
+            rowspan=5, sticky='NSEW', padx=10, pady=5)
+
+    def botao_procurar_command(self):
+        # adiciona nome dos arquivos selecionados ao menuoption e ao combinadorpdf
+
+        nome_arquivos = filedialog.askopenfilenames(
+            filetypes=[('Arquivos PDF', '*.pdf')])
+
+        # atualizando option menu
+        for nome_arquivo in nome_arquivos:
+            self.opcoes.append(nome_arquivo)
+        self.opcoes.sort(key=str.lower)
+
+        self.option_menu['menu'].delete(0, 'end')
+        for opcao in self.opcoes:
+            self.option_menu['menu'].add_command(
+                label=opcao, command=lambda: self.option_menu_command(opcao))
+
+    def option_menu_command(self, nome_arquivo):
+        # seta opcao mostrada e começa o visualizador do pdf
+        self.selecionado_menu.set(nome_arquivo)
+        self.frame_visualizar_pdf.visualizar(nome_arquivo)
+
+    def botao_inserir_command(self):
+        # modificando pdf e inserindo na listbox
+
+        if self.selecionado_menu.get() == 'Adicione um arquivo para editar':
+            return
+        
+        doc = fitz.open(self.selecionado_menu.get())
+        pdfFile = PdfFile(doc, self.selecionado_menu.get())
+        
+        if self.selecionado_radio.get() != 'TODAS':
+            pdfFile.selecionar_paginas(self.entry_paginas.get())
+            
+        self.combinadorPdf.adicionar_arquivo(pdfFile)
+        
+        self.lista_arquivos.insert(tk.END, self.selecionado_menu.get())
+        index = self.option_menu['menu'].index(self.selecionado_menu.get())
+        self.option_menu['menu'].delete(index)
+        self.opcoes.remove(self.selecionado_menu.get())
+
+        if len(self.opcoes) == 0:
+            self.selecionado_menu.set('Adicione um arquivo para editar')
+        else:
+            self.selecionado_menu.set(self.opcoes[0])
+        
+        self.frame_visualizar_pdf.widgets_padrao()
+        
+    def botao_baixar_command(self):
+        WindowBaixar(PdfFile(self.combinadorPdf.combinar()))
 
 
 if __name__ == '__main__':
