@@ -24,9 +24,10 @@ class CombinadorPDF:
 
 
 class PdfFile:
-    def __init__(self, fitz_doc, nome_arquivo=None):
+    def __init__(self, fitz_doc, nome_arquivo=None, dimensao=(250, 350)):
         self.nome_arquivo = nome_arquivo
         self.fitz_doc = fitz_doc
+        self.dimensao = dimensao
         self.lista_imagens = self.extrair_imagens()
 
     def extrair_imagens(self):
@@ -36,7 +37,7 @@ class PdfFile:
             pix = self.fitz_doc.getPagePixmap(pagina)
             mode = 'RGBA' if pix.alpha else 'RGB'
             image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-            image = image.resize((250, 350))
+            image = image.resize(self.dimensao)
             lista_imagens.append(ImageTk.PhotoImage(image))
 
         return lista_imagens
@@ -182,7 +183,7 @@ class FrameVisualizarPdf(tk.LabelFrame):
 
 
 class WindowBaixar(tk.Toplevel):
-    def __init__(self, pdfFile=None):
+    def __init__(self, pdfFile):
         tk.Toplevel.__init__(self)
 
         self.pdfFile = pdfFile
@@ -190,7 +191,7 @@ class WindowBaixar(tk.Toplevel):
         # ------------------------------------- widgets ----------------------------------------
 
         self.frame_visualizar_pdf = FrameVisualizarPdf(
-            self, pdfFile, dimensao=(400, 560))
+            self, pdfFile)
 
         self.frame_metadados = tk.LabelFrame(
             self, text='Editar metadados')
@@ -198,21 +199,22 @@ class WindowBaixar(tk.Toplevel):
         self.init_metadados_widgets()
 
         self.botao_concluir = tk.Button(
-            self, text='Escolher diretório e baixar', command=self.salvar)
+            self, text='Escolher diretório e baixar', command=self.botao_concluir_command)
 
         # ------------------------------------- layout ----------------------------------------
-
-        self.frame_visualizar_pdf.grid(
+        self.botao_concluir.grid(
             row=0, column=0,
-            sticky='N', padx=5, pady=10)
+            sticky='EW', padx=5, pady=5)
+        
+        self.frame_visualizar_pdf.grid(
+            row=1, column=0,
+            sticky='NS', padx=5, pady=10)
 
         self.frame_metadados.grid(
             row=0, column=1,
             rowspan=2, padx=5, pady=5)
 
-        self.botao_concluir.grid(
-            row=1, column=0,
-            sticky='EW', padx=5, pady=5)
+
 
     def init_metadados_widgets(self):
         # loop pelo dicionario metadata e cria widgets de acordo
@@ -232,9 +234,15 @@ class WindowBaixar(tk.Toplevel):
 
             self.entries[key] = entry
 
-    def salvar(self):
-        pass
-
+    def botao_concluir_command(self):
+        # abre dialogo para escolher nome e diretorio e salva arquivo
+        filename = filedialog.asksaveasfilename()
+        
+        if not filename.endswith('.pdf'):
+            filename += '.pdf'
+        
+        self.pdfFile.fitz_doc.save(filename)
+        
 
 class MainApplication(tk.Frame):
     def __init__(self, master):
@@ -414,7 +422,7 @@ class MainApplication(tk.Frame):
         self.frame_visualizar_pdf.widgets_padrao()
         
     def botao_baixar_command(self):
-        WindowBaixar(PdfFile(self.combinadorPdf.combinar()))
+        WindowBaixar(PdfFile(self.combinadorPdf.combinar(), dimensao=(400, 560)))
 
 
 if __name__ == '__main__':
