@@ -129,7 +129,8 @@ class FrameVisualizarPdf(tk.LabelFrame):
 
     def visualizar(self, nome_arquivo=None):
         # inicializa a visualizacao do pdf
-        if not self.pdfFile:
+        
+        if nome_arquivo:
             self.pdfFile = PdfFile(fitz.open(nome_arquivo))
 
         self.label_imagem.configure(image=self.pdfFile.lista_imagens[0])
@@ -388,7 +389,8 @@ class MainApplication(tk.Frame):
         self.option_menu['menu'].delete(0, 'end')
         for opcao in self.opcoes:
             self.option_menu['menu'].add_command(
-                label=opcao, command=lambda: self.option_menu_command(opcao))
+                label=opcao, 
+                command=lambda nome_arquivo=opcao: self.option_menu_command(nome_arquivo))
 
     def option_menu_command(self, nome_arquivo):
         # seta opcao mostrada e começa o visualizador do pdf
