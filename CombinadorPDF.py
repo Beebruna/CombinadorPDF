@@ -41,7 +41,7 @@ class PdfFile:
             lista_imagens.append(ImageTk.PhotoImage(image))
 
         return lista_imagens
-
+    
     def selecionar_paginas(self, paginas_selecionadas):
         # seleciona paginas especificas do pdf e exclui o resto
 
@@ -49,12 +49,20 @@ class PdfFile:
             return
 
         fitz_doc = fitz.open()
-        intervalos = paginas_selecionadas.split('-')
+        intervalos = paginas_selecionadas.split(',')
 
         for intervalo in intervalos:
-            paginas = intervalo.split(',')
-            fitz_doc.insertPDF(self.fitz_doc,
-                               from_page=int(paginas[0]) - 1, to_page=int(paginas[1]) - 1)
+            paginas = intervalo.split('-')
+            _from = int(paginas[0]) - 1
+            
+            if len(paginas) == 1:
+                to = int(paginas[0]) - 1
+            elif len(paginas) == 2:
+                to = int(paginas[1]) - 1
+                
+            fitz_doc.insertPDF(
+                self.fitz_doc,
+                from_page=_from, to_page=to)
 
         self.fitz_doc = fitz_doc
         self.lista_imagens = self.extrair_imagens()
@@ -307,7 +315,7 @@ class MainApplication(tk.Frame):
             self.frame_botao_intervalo, width=25)
 
         self.label_exemplo = tk.Label(
-            self.frame_botao_intervalo, text='Exemplo: 1,5-9,12')
+            self.frame_botao_intervalo, text='Exemplo: 1-5,9-12')
 
         self.botao_inserir = tk.Button(
             self.frame_inserir, text='Inserir', command=self.botao_inserir_command)
