@@ -4,76 +4,207 @@ from tkinter import filedialog
 from PIL import ImageTk, Image
 import fitz
 
-
 class CombinadorPDF:
+    """
+    Classe usada para combinar pdfs
+
+    Atributos
+    ---------
+    docs : list
+        lista de objetos fitz.fitz.Document
+    nome_arquivos : list
+        lista de nomes dos arquivos
+
+    Métodos
+    -------
+    adicionar_arquivo(self, pdfFile)
+        Adiciona nome do arquivo e objeto fitz.fitz.Document aos atributos
+    combinar(self)
+        Combina os pdfs da lista docs
+
+    """
+
     def __init__(self):
-        self.fitz_docs = []
+        """"""
+
+        self.docs = []
         self.nome_arquivos = []
 
     def adicionar_arquivo(self, pdfFile):
-        # adiciona arquivo os atributos
+        """
+        Adiciona nome do arquivo e objeto fitz.fitz.Document aos atributos
+
+        Parâmetros
+        ----------
+        nome_arquivo : str
+            nome do arquivo incluindo endereço absoluto
+        doc : fitz.fitz.Document
+            documento pdf
+        """
+
         self.nome_arquivos.append(pdfFile.nome_arquivo)
-        self.fitz_docs.append(pdfFile.fitz_doc)
+        self.docs.append(pdfFile.doc)
 
     def combinar(self):
-        # combina os pdfs armazenados em fitz_docs
-        fitz_doc_combinado = fitz.open()
-        for fitz_doc in self.fitz_docs:
-            fitz_doc_combinado.insertPDF(fitz_doc)
-        return fitz_doc_combinado
+        """
+        Combina os pdfs da lista docs
 
+        Retorno
+        -------
+        fitz.fitz.Document
+            um documento pdf com todos os pdfs da lista docs combinados
+        """
+
+        doc_combinado = fitz.open()
+        for doc in self.docs:
+            doc_combinado.insertPDF(doc)
+        return doc_combinado
 
 class PdfFile:
-    def __init__(self, fitz_doc, nome_arquivo=None, dimensao=(250, 350)):
+    """
+    Classe usada para manipulação dos pdfs de forma individual
+
+    Atributos
+    ---------
+    nome_arquivo : string
+        nome do arquivo
+    doc : fitz.fitz.Document
+        documento pdf
+    dimensao: tuple, opcional
+        dimensao das pagina exibida na GUI
+    imagens : list
+        lista de objetos PIL.ImageTk.PhotoImage para serem exibidos na GUI
+
+    Métodos
+    -------
+    extrair_imagens(self)
+        Extrai as páginas do pdf como imagens.
+    selecionar_paginas(self, intervalo):
+        Exclui do pdf todas as páginas que não estão dentro do intervalo.
+    """
+
+    def __init__(self, doc, nome_arquivo=None, dimensao=(250, 350)):
+        """
+        Parâmetros
+        ----------
+        doc : fitz.fitz.Document
+            documento pdf
+        nome_arquivo : str
+            nome do arquivo, caso tenha
+        dimensao : tuple, opcional
+            dimensao das imagens para a GUI
+        """
+
         self.nome_arquivo = nome_arquivo
-        self.fitz_doc = fitz_doc
+        self.doc = doc
         self.dimensao = dimensao
-        self.lista_imagens = self.extrair_imagens()
+        self.imagens = self.extrair_imagens()
 
     def extrair_imagens(self):
-        # extrai paginas do pdf como imagens
-        lista_imagens = []
-        for pagina in range(len(self.fitz_doc)):
-            pix = self.fitz_doc.getPagePixmap(pagina)
+        """
+        Extrai as páginas do pdf como imagens.
+
+        Usado para definir o atributo imagens.
+
+        Retorno
+        -------
+        list
+            lista das páginas do pdf como imagens (objetos ImageTk.PhotoImage)
+        """
+
+        imagens = []
+        for pagina in range(len(self.doc)):
+            pix = self.doc.getPagePixmap(pagina)
             mode = 'RGBA' if pix.alpha else 'RGB'
             image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
             image = image.resize(self.dimensao)
-            lista_imagens.append(ImageTk.PhotoImage(image))
+            imagens.append(ImageTk.PhotoImage(image))
 
-        return lista_imagens
-    
-    def selecionar_paginas(self, paginas_selecionadas):
-        # seleciona paginas especificas do pdf e exclui o resto
+        return imagens
 
-        if not paginas_selecionadas:
+    def selecionar_paginas(self, intervalo):
+        """
+        Exclui do pdf todas as páginas que não estão dentro do intervalo.
+
+        Parâmetros
+        ----------
+        intervalo : str
+            string com determinado formato informando intervalo das páginas selecionadas
+        """
+
+        # melhorar testes para determinar o formato do intervalo
+        if not intervalo:
             return
 
-        fitz_doc = fitz.open()
-        intervalos = paginas_selecionadas.split(',')
+        doc2 = fitz.open()
+        intervalos_paginas = intervalo.split(',')
 
-        for intervalo in intervalos:
-            paginas = intervalo.split('-')
+        for intervalo_paginas in intervalos_paginas:
+            paginas = intervalo_paginas.split('-')
+
             _from = int(paginas[0]) - 1
-            
+
             if len(paginas) == 1:
                 to = int(paginas[0]) - 1
             elif len(paginas) == 2:
                 to = int(paginas[1]) - 1
-                
-            fitz_doc.insertPDF(
-                self.fitz_doc,
+
+            doc2.insertPDF(
+                self.doc,
                 from_page=_from, to_page=to)
 
-        self.fitz_doc = fitz_doc
-        self.lista_imagens = self.extrair_imagens()
-
+        self.doc = doc2
+        self.imagens = self.extrair_imagens()
 
 class FrameVisualizarPdf(tk.LabelFrame):
-    def __init__(self, master, pdfFile=None, dimensao=(250, 350)):
+    """
+    Frame que mostra o pdf.
+
+    Atributos
+    ---------
+    master : tkinter.Frame
+        elemento da GUI 'pai' dessa classe
+    pdfFile : PdfFile
+        pdf a ser visualizado nesse frame
+        inicializado como None na inicialização do programa quando ainda não há pdfs a serem visualizados
+    img : ImageTk.PhotoImage
+        imagem mostrada quando não há pdfs sendo visualizados
+    label_imagem : tkinter.Label
+        label que recebe imagem da página para visualização
+    separator : ttk.Separator
+        elemento da GUI para separação
+    scale : ttk.Scale
+        escala para transitar entre as páginas do pdf mostradas no label_imagem
+    botao_voltar : tkinter.Button
+        botão para voltar a página
+    botao_avancar : tkinter.Button
+        botão para avançar a página
+    label_pagina : tkinter.Label
+        label que mostra a página sendo visualizada    
+
+    Métodos
+    -------
+    widgets_padrao(self)
+        Retorna a GUI para o estado padrão de incialização, não tendo nenhum pdf à mostra.
+    visualizar(self, nome_arquivo=None)
+        Reconfigura os widgets para visualizar o pdf.
+    atualizar_pagina(self, pagina, widget='botao')
+        Atualiza os widgets para mudar a página.
+    """
+
+    def __init__(self, master, pdfFile=None):
+        """
+        Parâmetros
+        ----------
+        master : tkinter.Frame
+            elemento da GUI 'pai' dessa classe
+        pdfFile : PdfFile
+            pdf a ser visualizado nesse frame
+            inicializado como None na inicialização do programa quando ainda não há pdfs a serem visualizados
+        """
+
         self.master = master
         tk.LabelFrame.__init__(self, master, text='Visualizar arquivo')
-        
-        self.pdfFile = pdfFile
 
         # ------------------------------------- widgets ----------------------------------------
 
@@ -87,14 +218,15 @@ class FrameVisualizarPdf(tk.LabelFrame):
         self.botao_avancar = tk.Button(self, text='>')
         self.label_pagina = tk.Label(self)
 
+        self.pdfFile = pdfFile
         if not pdfFile:
-            # imagem em branco para ocupar espaço do label imagem
-            image = Image.new('RGB', dimensao, (255, 255, 255))
+            # gera imagem em branco para ocupar espaço no label imagem
+            image = Image.new('RGB', (250, 350), (255, 255, 255))
             self.img = ImageTk.PhotoImage(image)
             self.widgets_padrao()
         else:
             self.visualizar()
-            
+
         # ------------------------------------- layout ----------------------------------------
 
         self.label_imagem.grid(
@@ -103,8 +235,7 @@ class FrameVisualizarPdf(tk.LabelFrame):
 
         self.separator.grid(
             row=1, column=0,
-            columnspan=3, sticky='WE',
-            pady=10)
+            columnspan=3, sticky='WE', pady=10)
 
         self.botao_voltar.grid(
             row=2, column=0,
@@ -122,33 +253,46 @@ class FrameVisualizarPdf(tk.LabelFrame):
             row=3, column=1)
 
     def widgets_padrao(self):
-        # volta os widgets para o padrao quando nao tem nenhum pdf a mostra
+        """
+        Retorna a GUI para o estado padrão de incialização, não tendo nenhum pdf à mostra.
+        """
+
         self.scale.set(1)
-        self.scale.configure(state=tk.DISABLED)
-
-        self.botao_avancar.configure(state=tk.DISABLED)
-        self.botao_voltar.configure(state=tk.DISABLED)
-
         self.label_pagina.configure(text='Página 1 de ?')
 
         self.label_imagem.configure(
             image=self.img)
         self.label_imagem.image = self.img
 
-    def visualizar(self, nome_arquivo=None):
-        # inicializa a visualizacao do pdf
+        self.scale.configure(state=tk.DISABLED)
+        self.botao_avancar.configure(state=tk.DISABLED)
+        self.botao_voltar.configure(state=tk.DISABLED)
         
-        if nome_arquivo:
-            self.pdfFile = PdfFile(fitz.open(nome_arquivo))
+        self.pdfFile = None
+        
 
-        self.label_imagem.configure(image=self.pdfFile.lista_imagens[0])
-        self.label_imagem.image = self.pdfFile.lista_imagens[0]
+    def visualizar(self, nome_arquivo=None):
+        """
+        Reconfigura os widgets para visualizar o pdf.
+
+        Parâmetros
+        ----------
+        nome_arquivo : str, opcional
+            nome do arquivo para inicializar ou mudar o documento pdf
+        """
+
+        if nome_arquivo:
+            self.pdfFile = PdfFile(fitz.open(nome_arquivo), nome_arquivo)
+        
+        # manter segunda referencia
+        self.label_imagem.configure(image=self.pdfFile.imagens[0])
+        self.label_imagem.image = self.pdfFile.imagens[0]
 
         self.label_pagina.configure(
-            text='Página 1 de {}'.format(len(self.pdfFile.fitz_doc)))
+            text='Página 1 de {}'.format(len(self.pdfFile.doc)))
 
         self.scale.configure(
-            from_=1, to=len(self.pdfFile.fitz_doc),
+            from_=1, to=len(self.pdfFile.doc),
             command=lambda pagina: self.atualizar_pagina(pagina, 'scale'))
 
         self.botao_voltar.configure(
@@ -162,9 +306,18 @@ class FrameVisualizarPdf(tk.LabelFrame):
             state=tk.NORMAL)
 
     def atualizar_pagina(self, pagina, widget='botao'):
-        # atualiza a pagina, mudando a imagem exibida e atualizando widgets
+        """
+        Atualiza os widgets para mudar a página.
 
-        # argumento pagina vem diferente dependendo do widget
+        Parâmetros
+        ----------
+        pagina : str
+            página atual do pdf que chega de outro widget como string
+        widget : str
+            widget que está chamando essa função, podendo ser botao (tk.Button) ou scale (ttk.Scale)
+        """
+
+        # argumento pagina chega diferente dependendo do widget
         if widget == 'scale':
             pagina = int(pagina.split('.')[0])
             pagina = pagina - 1
@@ -172,27 +325,54 @@ class FrameVisualizarPdf(tk.LabelFrame):
             pagina = int(pagina)
             self.scale.set(pagina + 1)
 
-        # atualizando imagem e mantendo segunda referencia
-        self.label_imagem.configure(image=self.pdfFile.lista_imagens[pagina])
-        self.label_imagem.image = self.pdfFile.lista_imagens[pagina]
+        # manter segunda referencia da imagem
+        self.label_imagem.configure(image=self.pdfFile.imagens[pagina])
+        self.label_imagem.image = self.pdfFile.imagens[pagina]
 
         self.label_pagina.configure(text='Página {} de {}'.format(
-            pagina + 1, len(self.pdfFile.fitz_doc)))
+            pagina + 1, len(self.pdfFile.doc)))
 
-        # atualizando estado dos botoes
         if pagina == 0:
             self.botao_voltar.configure(state=tk.DISABLED)
         else:
             self.botao_voltar.configure(state=tk.NORMAL)
 
-        if pagina == len(self.pdfFile.fitz_doc) - 1:
+        if pagina == len(self.pdfFile.doc) - 1:
             self.botao_avancar.configure(state=tk.DISABLED)
         else:
             self.botao_avancar.configure(state=tk.NORMAL)
 
-
 class WindowBaixar(tk.Toplevel):
+    """
+    Elemento da GUI para concluir as edições do pdf e baixá-lo
+
+    Atributos
+    ---------
+    pdfFile : PdfFile
+        pdf sendo editado
+    frame_visualizar_pdf : FrameVisualizarPdf
+        frame para mostrar o pdf
+    frame_metadados : tk.LabelFrame
+        frame que mostra e permite edição dos metadados do pdf
+    entries : dictionary
+        dicionario com os metadados do pdf
+    botao_concluir : tk.Button
+        botão que chama comando de salvar o pdf no estado atual
+
+    Métodos
+    -------
+    botao_concluir_command(self)
+        Abre diálogo para escolher nome e diretório para salvar o arquivo
+    """
+
     def __init__(self, pdfFile):
+        """
+        Parâmetros
+        ----------
+        pdfFile : PdfFile
+            documento pdf sendo editado
+        """
+
         tk.Toplevel.__init__(self)
 
         self.pdfFile = pdfFile
@@ -202,19 +382,35 @@ class WindowBaixar(tk.Toplevel):
         self.frame_visualizar_pdf = FrameVisualizarPdf(
             self, pdfFile)
 
-        self.frame_metadados = tk.LabelFrame(
-            self, text='Editar metadados')
-
-        self.init_metadados_widgets()
-
         self.botao_concluir = tk.Button(
             self, text='Escolher diretório e baixar', command=self.botao_concluir_command)
 
+        self.frame_metadados = tk.LabelFrame(
+            self, text='Editar metadados')
+
+        # loop pelo dicionario metadata do pdf e criando widgets de acordo
+        self.entries = {}
+
+        for key, value in self.pdfFile.doc.metadata.items():
+            frame = tk.Frame(self.frame_metadados)
+            label = tk.Label(frame, text=key.capitalize())
+            entry = tk.Entry(frame, width=50)
+
+            if self.pdfFile.doc.metadata[key]:
+                entry.insert(0, self.pdfFile.doc.metadata[key])
+
+            frame.pack(pady=15)
+            label.pack()
+            entry.pack()
+
+            self.entries[key] = entry
+
         # ------------------------------------- layout ----------------------------------------
+
         self.botao_concluir.grid(
             row=0, column=0,
             sticky='EW', padx=5, pady=5)
-        
+
         self.frame_visualizar_pdf.grid(
             row=1, column=0,
             sticky='NS', padx=5, pady=10)
@@ -223,46 +419,79 @@ class WindowBaixar(tk.Toplevel):
             row=0, column=1,
             rowspan=2, padx=5, pady=5)
 
-
-
-    def init_metadados_widgets(self):
-        # loop pelo dicionario metadata e cria widgets de acordo
-        self.entries = {}
-
-        for key, value in self.pdfFile.fitz_doc.metadata.items():
-            frame = tk.Frame(self.frame_metadados)
-            label = tk.Label(frame, text=key.capitalize())
-            entry = tk.Entry(frame, width=50)
-
-            if self.pdfFile.fitz_doc.metadata[key]:
-                entry.insert(0, self.pdfFile.fitz_doc.metadata[key])
-
-            frame.pack(pady=15)
-            label.pack()
-            entry.pack()
-
-            self.entries[key] = entry
-
     def botao_concluir_command(self):
-        # abre dialogo para escolher nome e diretorio e salva arquivo
+        """
+        Abre diálogo para escolher nome e diretório para salvar o arquivo
+        """
+
         filename = filedialog.asksaveasfilename()
-        
+
         if not filename.endswith('.pdf'):
             filename += '.pdf'
-        
-        self.pdfFile.fitz_doc.save(filename)
-        
+
+        self.pdfFile.doc.save(filename)
 
 class MainApplication(tk.Frame):
+    """
+    Frame mostrado na janela inicial da aplicação.
+
+    Atributos
+    ---------
+    master : tkinter.Tk
+        Janela principal da aplicação.
+    combinadorPdf : CombinadorPDF
+        Objeto usado para combinar os pdfs.
+
+    frame_arquivos : LabelFrame
+        Frame com widgets de entrada de dados.
+    botao_procurar : tk.Button
+        Botão que abre diálogo para seleção dos arquivos.
+
+    frame_inserir : LabelFrame
+        Frame com widgets para algumas possibilidades de edição
+    opcoes : list
+        Lista com arquivos selecionados
+    selecionado_menu : StringVar
+        Opção escolhida no OptionMenu.
+    option_menu : tk.OptionMenu
+        Elemento da GUI para escolher entre os arquivos selecionados.
+    selecionado_radio : StringVar
+        Opção escolhida nos botões de rádio.
+    botao_radio_todas : tk.Radiobutton
+        Botão de rádio para inserir o pdf inteiro.
+    botao_radio_intervalo : tk.Radiobutton
+        Botão de rádio para escolher as páginas do pdf.
+    entry_paginas : tk.Entry
+        Widget de entrada para escolher o intervalo de páginas como uma string formatada.
+    label_exemplo : tk.Label
+        Label com exemplo de como deve ser formatada a string no widget de entrada entry_paginas.
+    botao_inserir : tk.Button
+        Botão para inserir 
+
+    frame_visualizar : FrameVisualizarPdf
+        Frame que mostra o pdf
+
+    frame_combinar : LabelFrame
+        Frame com widgets para mostrar os arquivos selecionados e botão baixar.
+    listbox : tk.Listbox
+        Elemento da GUI para selecionar o pdf para visualização e edição.
+    botao_baixar : tk.Button
+        Botão para gerar um pdf combinado e abrir outra janela para visualizar e salvar.
+
+    Métodos
+    -------
+    botao_procurar_command(self)
+    option_menu_command(self, nome_arquivo)
+    botao_baixar_command(self)
+
+    """
+
     def __init__(self, master):
         tk.Frame.__init__(self, master)
         self.master = master
         master.title('CombinadorPDF')
 
         self.combinadorPdf = CombinadorPDF()
-        self.inicializacao_widgets()
-
-    def inicializacao_widgets(self):
 
         # --- frame arquivos --------------------------------------
 
@@ -366,14 +595,14 @@ class MainApplication(tk.Frame):
         self.frame_combinar = tk.LabelFrame(
             self, text='Arquivos a serem combinados')
 
-        self.lista_arquivos = tk.Listbox(
+        self.listbox = tk.Listbox(
             self.frame_combinar, selectmode=tk.SINGLE)
 
         self.botao_baixar = tk.Button(
             self.frame_combinar, text='Baixar',
             command=self.botao_baixar_command)
 
-        self.lista_arquivos.pack(
+        self.listbox.pack(
             padx=10, pady=5,
             fill=tk.BOTH, expand=True)
 
@@ -384,42 +613,55 @@ class MainApplication(tk.Frame):
             rowspan=5, sticky='NSEW', padx=10, pady=5)
 
     def botao_procurar_command(self):
-        # adiciona nome dos arquivos selecionados ao menuoption e ao combinadorpdf
+        """
+        Abre diálogo de seleção de arquivos e adiciona os arquivos selecionados às opções.
+        """
 
         nome_arquivos = filedialog.askopenfilenames(
             filetypes=[('Arquivos PDF', '*.pdf')])
 
-        # atualizando option menu
         for nome_arquivo in nome_arquivos:
             self.opcoes.append(nome_arquivo)
         self.opcoes.sort(key=str.lower)
 
+        # readicionando opçoes
         self.option_menu['menu'].delete(0, 'end')
         for opcao in self.opcoes:
             self.option_menu['menu'].add_command(
-                label=opcao, 
+                label=opcao,
                 command=lambda nome_arquivo=opcao: self.option_menu_command(nome_arquivo))
 
     def option_menu_command(self, nome_arquivo):
-        # seta opcao mostrada e começa o visualizador do pdf
+        """
+        Ao selecionar uma opção do option menu, configura os widgets para visualizar aquela opção.
+
+        Parâmetros
+        ----------
+        nome_arquivo : str
+            nome do arquivo selecionado no option_menu
+        """
+
         self.selecionado_menu.set(nome_arquivo)
         self.frame_visualizar_pdf.visualizar(nome_arquivo)
 
     def botao_inserir_command(self):
-        # modificando pdf e inserindo na listbox
-
-        if self.selecionado_menu.get() == 'Adicione um arquivo para editar':
+        """
+        Salvando e inserindo pdf na listbox de acordo com os parâmetros passados no entry_paginas para combiná-lo
+        """
+        
+        pdfFile = self.frame_visualizar_pdf.pdfFile
+        
+        if pdfFile.nome_arquivo == 'Adicione um arquivo para editar':
             return
         
-        doc = fitz.open(self.selecionado_menu.get())
-        pdfFile = PdfFile(doc, self.selecionado_menu.get())
+        doc = pdfFile.doc
         
         if self.selecionado_radio.get() != 'TODAS':
             pdfFile.selecionar_paginas(self.entry_paginas.get())
-            
+
         self.combinadorPdf.adicionar_arquivo(pdfFile)
-        
-        self.lista_arquivos.insert(tk.END, self.selecionado_menu.get())
+
+        self.listbox.insert(tk.END, self.selecionado_menu.get())
         index = self.option_menu['menu'].index(self.selecionado_menu.get())
         self.option_menu['menu'].delete(index)
         self.opcoes.remove(self.selecionado_menu.get())
@@ -428,12 +670,16 @@ class MainApplication(tk.Frame):
             self.selecionado_menu.set('Adicione um arquivo para editar')
         else:
             self.selecionado_menu.set(self.opcoes[0])
-        
-        self.frame_visualizar_pdf.widgets_padrao()
-        
-    def botao_baixar_command(self):
-        WindowBaixar(PdfFile(self.combinadorPdf.combinar(), dimensao=(400, 560)))
 
+        self.frame_visualizar_pdf.widgets_padrao()
+
+    def botao_baixar_command(self):
+        """
+        Combina os pdfs da listbox e abre janela para salvar o pdf gerado.
+        """
+
+        WindowBaixar(
+            PdfFile(self.combinadorPdf.combinar(), dimensao=(400, 560)))
 
 if __name__ == '__main__':
     root = tk.Tk()
