@@ -5,13 +5,16 @@ Ao executar, o programa deve abrir uma janela como essa
 
 ## Carregue arquivos pdf para edição
 Clique em procurar arquivos e selecione todos os pdfs que deseja editar e combinar
+
 ![](images/Screenshot_2.png)
 
 ## Selecione os arquivos carregados
 No frame edição de arquivos, selecione os arquivos que deseja combinar em ordem
+
 ![](images/Screenshot_4.png)
 
 Se você seguiu os passos corretamente até aqui, o pdf aparecerá no frame Visualizar arquivo, onde você pode visualizar as páginas do pdf selecionado.
+
 ![](images/Screenshot_6.png)
 
 ## Editando o pdf
@@ -25,6 +28,7 @@ Se houver mais de um intervalo, separe-os com ,
 ## Salvando mudanças
 Após inserir todos os pdfs que deseja combinar, eles devem estar listados no frame Arquivos a serem combinados.
 Clique em Baixar
+
 ![](images/Screenshot_8.png)
 
 Uma janela com um preview do pdf combinado e um frame que te permite adicionar metadados ao pdf será aberta.
