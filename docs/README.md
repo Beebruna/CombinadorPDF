@@ -21,6 +21,7 @@ Se você seguiu os passos corretamente até aqui, o pdf aparecerá no frame Visu
 No frame edição de arquivos, você pode adicionar o pdf completamente sem edições ao clicar o botão Inserir com a opção Todas as páginas selecionada ou pegar apenas intervalos de páginas.
 
 Separe os intervalos de página com -
+
 Se houver mais de um intervalo, separe-os com ,
 
 ![](images/Screenshot_7.png)
