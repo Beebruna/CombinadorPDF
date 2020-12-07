@@ -6,4 +6,4 @@ Programa que permite a combinação e edição de pdfs.
 
 [Tutorial](/docs/TUTORIAL.md)
 
-[Exemplo](/examples/EXAMPLES.md)
+[Exemplo](/example/EXAMPLES.md)
