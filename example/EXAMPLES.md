@@ -8,6 +8,7 @@ Inserindo 3 arquivos para esse exemplo, com apenas as duas últimas páginas do 
 [input3.pdf](files/input3.pdf)
 
 ![](images/exemplo.png)
+![](images/exemplo2.png)
 
 Arquivo de saída nomeado output.pdf:
 
