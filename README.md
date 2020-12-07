@@ -16,3 +16,5 @@ Em princípio, o programa será capaz apenas de selecionar os arquivos desejados
 
 ## **III. Resultados Esperados.**
 Espera-se que o projeto possa otimizar o tempo que uma pessoa despende durante a combinação de arquivos em PDF, além de proporcionar mais organização a esses.
+
+[teste](CombinadorPDF/docs/README.md)
